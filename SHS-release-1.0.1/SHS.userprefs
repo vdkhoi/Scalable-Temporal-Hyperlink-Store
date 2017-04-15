@@ -1,0 +1,14 @@
+﻿<Properties StartupItem="Server/Server.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Library/DiskSorter.cs">
+    <Files>
+      <File FileName="Library/DiskSorter.cs" Line="59" Column="44" />
+      <File FileName="Server/Server.cs" Line="67" Column="48" />
+      <File FileName="Library/Tcp.cs" Line="235" Column="8" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

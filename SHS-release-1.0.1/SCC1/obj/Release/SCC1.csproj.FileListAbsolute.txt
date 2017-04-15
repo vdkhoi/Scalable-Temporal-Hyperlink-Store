@@ -1,0 +1,7 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\bin\Release\SHS.SCC1.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\bin\Release\SHS.SCC1.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\bin\Release\SHS.SCC1.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\bin\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\bin\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\obj\Release\SHS.SCC1.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC1\obj\Release\SHS.SCC1.pdb

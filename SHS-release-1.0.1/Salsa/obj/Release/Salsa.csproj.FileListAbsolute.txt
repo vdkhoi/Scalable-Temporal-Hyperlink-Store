@@ -1,0 +1,7 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\bin\Release\SHS.Salsa.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\bin\Release\SHS.Salsa.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\bin\Release\SHS.Salsa.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\bin\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\bin\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\obj\Release\SHS.Salsa.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Salsa\obj\Release\SHS.Salsa.pdb

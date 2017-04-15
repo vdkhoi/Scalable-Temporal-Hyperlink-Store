@@ -1,0 +1,8 @@
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/obj/Release/.NETFramework,Version=v4.5.AssemblyAttribute.cs
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/bin/Release/SHS.SCC2.exe.config
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/bin/Release/SHS.SCC2.exe.mdb
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/bin/Release/SHS.SCC2.exe
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/obj/Release/SHS.SCC2.exe
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/obj/Release/SHS.SCC2.exe.mdb
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/bin/Release/SHS.Library.dll
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/SCC2/bin/Release/SHS.Library.dll.mdb

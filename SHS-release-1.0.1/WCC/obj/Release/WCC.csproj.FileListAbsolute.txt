@@ -1,0 +1,7 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\bin\Release\SHS.WCC.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\bin\Release\SHS.WCC.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\bin\Release\SHS.WCC.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\bin\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\bin\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\obj\Release\SHS.WCC.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\WCC\obj\Release\SHS.WCC.pdb

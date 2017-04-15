@@ -1,0 +1,7 @@
+sudo SHS_restart
+sudo SHS_copy # copies the content from /home/khoi/SHS to the nodes
+sudo SHS_stop # kills all nodes
+sudo SHS_restart # restarts the nodes only two at once.
+sudo SHS_status # shows all running SHS processes on the nodes. If there is no entry for one of the nodes the process has crashed.
+SHS_logs # shows the SHS output of all nodes
+SHS_clean # deletes all log and *.shs files

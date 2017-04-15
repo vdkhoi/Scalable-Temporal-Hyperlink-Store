@@ -1,0 +1,8 @@
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/obj/Release/.NETFramework,Version=v4.5.AssemblyAttribute.cs
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/bin/Release/SHS.RegressionTest1.exe.config
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/bin/Release/SHS.RegressionTest1.exe.mdb
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/bin/Release/SHS.RegressionTest1.exe
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/obj/Release/SHS.RegressionTest1.exe
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/obj/Release/SHS.RegressionTest1.exe.mdb
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/bin/Release/SHS.Library.dll
+/media/khoi/STUFFS/Projects/Scalable_Hyperlink_Store/SHS-release-1.0.1/RegressionTest1/bin/Release/SHS.Library.dll.mdb

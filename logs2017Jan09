@@ -1,0 +1,56 @@
+node09: Khoi: Connected.. 
+node09: Khoi: Connected.. 
+node10: Khoi: Connected.. 
+node10: Khoi: Connected.. 
+node11: Khoi: Connected.. 
+node11: Khoi: Connected.. 
+node12: Khoi: Connected.. 
+node12: Khoi: Connected.. 
+node13: Khoi: Connected.. 
+node13: Khoi: Connected.. 
+node14: Khoi: Connected.. 
+node14: Khoi: Connected.. 
+node15: Khoi: Connected.. 
+node15: Khoi: Connected.. 
+node16: Khoi: Connected.. 
+node16: Khoi: Connected.. 
+node17: Khoi: Connected.. 
+node17: Khoi: Connected.. 
+node18: Khoi: Connected.. 
+node18: Khoi: Connected.. 
+node19: Khoi: Connected.. 
+node19: Khoi: Connected.. 
+node20: Khoi: Connected.. 
+node20: Khoi: Connected.. 
+node21: Khoi: Connected.. 
+node21: Khoi: Connected.. 
+node22: Khoi: Connected.. 
+node22: Khoi: Connected.. 
+node23: Khoi: Connected.. 
+node23: Khoi: Connected.. 
+node23: Stack overflow in unmanaged: IP: 0x61e2b2, fault addr: 0x7fc4ea806ff8
+node23: Stack overflow in unmanaged: IP: 0x61e2b9, fault addr: 0x7fc4ea804ff8
+node23: Stack overflow in unmanaged: IP: 0x61e2fd, fault addr: 0x7fc4ea803fe8
+node23: Stack overflow in unmanaged: IP: 0x61e2bf, fault addr: 0x7fc4ea802ff8
+node23: Stack overflow in unmanaged: IP: 0x61e2fd, fault addr: 0x7fc4ea801ff8
+node23: Stack overflow in unmanaged: IP: 0x61e2cb, fault addr: 0x7fc4ea800fe8
+node23: Stack overflow in unmanaged: IP: 0x61e2b2, fault addr: 0x7fc4ea7ffff8
+node23: 
+node23: Unhandled Exception:
+node23: StackOverflowException
+node23: [ERROR] FATAL UNHANDLED EXCEPTION: System.StackOverflowException: The requested operation caused a stack overflow.
+node23:   at (wrapper managed-to-native) System.Object:__icall_wrapper_mono_gc_alloc_vector (intptr,intptr,intptr)
+node23:   at (wrapper alloc) System.Object:AllocVector (intptr,intptr)
+node23:   at SHS.Channel.ReadBytes () [0x00024] in <2bf5ae8d036c4d65b071e954de1aaefe>:0 
+node23:   at SHS.Server+<ReceiveUrls>d__1.MoveNext () [0x0001e] in <9430af332c13400d9c2cfe1ba443cc12>:0 
+node23:   at SHS.Partition.AddRow (SHS.Partition+ThreadLocalState partTLS, System.String[] primaries, System.Int32 urlStrideLen, System.Int32 fwdStrideLen, System.Int32 bwdStrideLen, SHS.LinkCompression fwdCompression, SHS.LinkCompression bwdCompression, System.Collections.Generic.IEnumerable`1[T] rowUrls, System.Collections.Generic.IEnumerable`1[T] rowLinks, System.Action UrlCellFinishedClosure, System.Func`2[T,TResult] PropagateBwdsClosure, System.Func`2[T,TResult] UrlMergeCompletedClosure, System.Action CellFinalizedClosure, System.Action`1[T] CommitClosure) [0x000d2] in <9430af332c13400d9c2cfe1ba443cc12>:0 
+node23:   at SHS.Server.ProvideService (System.Object obj) [0x0185b] in <9430af332c13400d9c2cfe1ba443cc12>:0 
+node23:   at System.Threading.ThreadHelper.ThreadStart_Context (System.Object state) [0x0002c] in <a8460a77e67a430a8486a9751162e5f4>:0 
+node23:   at System.Threading.ExecutionContext.RunInternal (System.Threading.ExecutionContext executionContext, System.Threading.ContextCallback callback, System.Object state, System.Boolean preserveSyncCtx) [0x0008d] in <a8460a77e67a430a8486a9751162e5f4>:0 
+node23:   at System.Threading.ExecutionContext.Run (System.Threading.ExecutionContext executionContext, System.Threading.ContextCallback callback, System.Object state, System.Boolean preserveSyncCtx) [0x00000] in <a8460a77e67a430a8486a9751162e5f4>:0 
+node23:   at System.Threading.ExecutionContext.Run (System.Threading.ExecutionContext executionContext, System.Threading.ContextCallback callback, System.Object state) [0x00031] in <a8460a77e67a430a8486a9751162e5f4>:0 
+node23:   at System.Threading.ThreadHelper.ThreadStart (System.Object obj) [0x00012] in <a8460a77e67a430a8486a9751162e5f4>:0 
+node24: Khoi: Connected.. 
+node24: Khoi: Connected.. 
+node25: Khoi: Connected.. 
+node25: Khoi: Connected.. 
