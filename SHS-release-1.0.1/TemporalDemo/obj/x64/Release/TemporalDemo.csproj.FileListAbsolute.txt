@@ -1,0 +1,8 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\bin\x64\Release\SHS.TemporalDemo.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\bin\x64\Release\SHS.TemporalDemo.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\bin\x64\Release\SHS.TemporalDemo.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\bin\x64\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\bin\x64\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\obj\x64\Release\SHS.TemporalDemo.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\obj\x64\Release\SHS.TemporalDemo.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalDemo\obj\x64\Release\TemporalDemo.csprojResolveAssemblyReference.cache

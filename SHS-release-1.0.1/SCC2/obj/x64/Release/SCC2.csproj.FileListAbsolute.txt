@@ -1,0 +1,8 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\bin\x64\Release\SHS.SCC2.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\bin\x64\Release\SHS.SCC2.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\bin\x64\Release\SHS.SCC2.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\bin\x64\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\bin\x64\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\obj\x64\Release\SHS.SCC2.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\obj\x64\Release\SHS.SCC2.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\SCC2\obj\x64\Release\SCC2.csprojResolveAssemblyReference.cache

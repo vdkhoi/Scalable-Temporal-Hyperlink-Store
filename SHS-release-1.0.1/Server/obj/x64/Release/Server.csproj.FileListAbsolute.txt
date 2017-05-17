@@ -1,0 +1,14 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\bin\x64\Release\SHS.Server.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\bin\x64\Release\SHS.Server.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\bin\x64\Release\SHS.Server.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\bin\x64\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\bin\x64\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\obj\x64\Release\Server.csprojResolveAssemblyReference.cache
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\obj\x64\Release\SHS.Server.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\Server\obj\x64\Release\SHS.Server.pdb
+F:\Projects\SHS_Data\SHS.Server.exe.config
+F:\Projects\SHS_Data\SHS.Server.exe
+F:\Projects\SHS_Data\SHS.Server.pdb
+Z:\SHS\SHS_Data\SHS.Server.exe.config
+Z:\SHS\SHS_Data\SHS.Server.exe
+Z:\SHS\SHS_Data\SHS.Server.pdb

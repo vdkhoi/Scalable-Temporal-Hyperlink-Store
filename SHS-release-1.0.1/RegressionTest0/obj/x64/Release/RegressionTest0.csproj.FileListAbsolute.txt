@@ -1,0 +1,8 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\bin\x64\Release\SHS.RegressionTest0.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\bin\x64\Release\SHS.RegressionTest0.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\bin\x64\Release\SHS.RegressionTest0.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\bin\x64\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\bin\x64\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\obj\x64\Release\RegressionTest0.csprojResolveAssemblyReference.cache
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\obj\x64\Release\SHS.RegressionTest0.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\RegressionTest0\obj\x64\Release\SHS.RegressionTest0.pdb

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.IO.Compression;
 
 namespace SHS {
   class Server {
@@ -1013,6 +1014,7 @@ namespace SHS {
                                   urlCellFinishedClosure, propagateBwdsClosure,
                                   urlMergeCompletedClosure, cellFinishedClosure, commitClosure);
 
+                  openPart.AddTemporalData("AddTemporalData_Khoi.gz", new StreamReader(new GZipStream(new FileStream("debug_file_100.gz", FileMode.Open, FileAccess.Read), CompressionMode.Decompress)));
                   break;
                 } finally {
                   if (this.isLeader) {
@@ -1021,6 +1023,239 @@ namespace SHS {
                 }
               }
               #endregion
+            //case (uint)OpCodes.AddTemporalPageLinks:   // Modify here. Add Temporal Page Link
+            //  #region
+            //  {
+            //      var urlCellStrideLength = channel.ReadInt32();
+            //      var fwdCellStrideLength = channel.ReadInt32();
+            //      var bwdCellStrideLength = channel.ReadInt32();
+            //      var fwdCompression = (LinkCompression)channel.ReadInt32();
+            //      var bwdCompression = (LinkCompression)channel.ReadInt32();
+            //      var primaries = new string[openPart.ping.numPartitions];
+            //      for (int i = 0; i < primaries.Length; i++)
+            //      {
+            //          primaries[i] = channel.ReadString();
+            //      }
+
+            //      StoreMetaData smd = null;
+            //      if (this.isLeader)
+            //      {
+            //          lock (this.stores)
+            //          {
+            //              smd = this.stores[openPart.spid.storeID];
+            //          }
+            //          smd.rwlock.EnterUpgradeableReadLock();
+            //      }
+            //      try
+            //      {
+
+            //          Action urlCellFinishedClosure =
+            //            delegate()
+            //            {
+            //                channel.WriteInt32(0);
+            //                channel.Flush();
+            //            };
+
+            //          Func<List<Tuple<long, long, long>>, List<Tuple<long, long, long>>> propagateBwdsClosure =
+            //            remotePairs =>
+            //            {
+            //                channel.WriteInt32(remotePairs.Count);
+            //                foreach (var pair in remotePairs)
+            //                {
+            //                    channel.WriteInt64(pair.Item1);
+            //                    channel.WriteInt64(pair.Item2);
+            //                    channel.WriteInt64(pair.Item3);  // time stamp
+            //                }
+            //                channel.Flush();
+            //                int n = channel.ReadInt32();
+            //                if (n == -1)
+            //                {
+            //                    return null;
+            //                }
+            //                else
+            //                {
+            //                    var res = new List<Tuple<long, long, long>>(n);
+            //                    for (int i = 0; i < n; i++)
+            //                    {
+            //                        var uid1 = channel.ReadInt64();
+            //                        var uid2 = channel.ReadInt64();
+            //                        var time_stamp = channel.ReadInt64();
+            //                        res.Add(new Tuple<long, long, long>(uid1, uid2, time_stamp));
+            //                    }
+            //                    return res;
+            //                }
+            //            };
+
+            //          Func<long, long[]> urlMergeCompletedClosure =
+            //            cmBaseUid =>
+            //            {
+            //                channel.WriteInt64(cmBaseUid);
+            //                channel.Flush();
+            //                var res = new long[openPart.ping.numPartitions];
+            //                for (int i = 0; i < res.Length; i++)
+            //                {
+            //                    res[i] = channel.ReadInt64();
+            //                }
+            //                return res;
+            //            };
+
+            //          Action cellFinishedClosure =
+            //            delegate()
+            //            {
+            //                channel.WriteInt64(-1);
+            //                channel.Flush();
+            //                channel.ReadInt32();
+            //            };
+
+            //          // CommitClosure will throw a SocketException exception if any of the secondaries is not available.
+            //          // This exception should propagate all the way back to the client, causing it to retry the
+            //          // AddRow operation until it fully succeeds.
+            //          Action<List<int>> commitClosure =
+            //            delegate(List<int> epochs)
+            //            {
+            //                channel.WriteInt32(0);
+            //                channel.Flush();
+            //                if (this.isLeader)
+            //                {
+            //                    var resp1 = channel.ReadInt32();
+            //                    Contract.Assert(resp1 == 0);
+
+            //                    // Acquire a write-lock on the store, to prevent interference between 
+            //                    // AddRow-driven replication and AdvertiseService-driven replication.
+            //                    smd.rwlock.EnterWriteLock();
+            //                    try
+            //                    {
+            //                        // Replicate the new cell on each primary to all secondaries that are currently
+            //                        // believed to be available and actually responsive.  Rather than using the 
+            //                        // heartbeat connections between this leader and the servers and having to deal 
+            //                        // with locking issues, I open a new dedicated single-use connection to each server.
+            //                        var channels = new Channel[smd.servers.Length]; // initially all null
+            //                        lock (this.servers)
+            //                        {
+            //                            for (int i = 0; i < smd.servers.Length; i++)
+            //                            {
+            //                                var server = smd.servers[i];
+            //                                try
+            //                                {
+            //                                    if (this.servers.Contains(smd.servers[i]))
+            //                                    {
+            //                                        channels[i] = new Channel(smd.servers[i], Service.PortNumber);
+            //                                    }
+            //                                }
+            //                                catch (SocketException)
+            //                                {
+            //                                    // smd.servers[i] has crashed.  If it comes back online, it will readvertise 
+            //                                    // itself and pull any needed cells as part of the AdvertiseService protocol.
+            //                                }
+            //                            }
+            //                        }
+
+            //                        for (int i = 0; i < smd.servers.Length; i++)
+            //                        {
+            //                            // what partitions does this server need to copy?
+            //                            if (channels[i] != null)
+            //                            {
+            //                                var partIDs = smd.PartitionsOnServer(smd.servers[i])
+            //                                                  .Except(primaries.Select((x, partID) => new { server = x, partID = partID })
+            //                                                                  .Where(x => x.server == smd.servers[i])
+            //                                                                  .Select(x => x.partID))
+            //                                                  .ToList();
+            //                                try
+            //                                {
+            //                                    channels[i].WriteUInt32((uint)OpCodes.AddRowOnSecondary);
+            //                                    channels[i].WriteBytes(openPart.spid.storeID.ToByteArray());
+            //                                    channels[i].WriteInt32(partIDs.Count);
+            //                                    foreach (var partID in partIDs)
+            //                                    {
+            //                                        channels[i].WriteInt32(partID);
+            //                                        channels[i].WriteString(primaries[partID]);
+            //                                    }
+            //                                    channels[i].Flush();
+            //                                }
+            //                                catch (SocketException)
+            //                                {
+            //                                    channels[i] = null;
+            //                                }
+            //                            }
+            //                        }
+            //                        // Wait for each server to respond
+            //                        for (int i = 0; i < smd.servers.Length; i++)
+            //                        {
+            //                            if (channels[i] != null)
+            //                            {
+            //                                try
+            //                                {
+            //                                    int resp2 = channels[i].ReadInt32();
+            //                                    Contract.Assert(resp2 == 0);
+            //                                }
+            //                                catch (SocketException)
+            //                                {
+            //                                    channels[i] = null;
+            //                                }
+            //                            }
+            //                        }
+
+            //                        // All available servers reported that they have successfully pulled the replicas 
+            //                        // they are supposed to have.  All TCP channels are in a state where they 
+            //                        // have either been severed since (in which case the server will readvertise
+            //                        // itself) or are waiting for a signal that the epoch can be advanced and
+            //                        // superfluous cell files deleted.
+
+            //                        // Update the meta-data on the leader, thereby committing the advance of the epoch
+            //                        smd.epochs = epochs;
+            //                        lock (this.stores)
+            //                        {
+            //                            this.WriteMetaData();
+            //                        }
+
+            //                        for (int i = 0; i < smd.servers.Length; i++)
+            //                        {
+            //                            if (channels[i] != null)
+            //                            {
+            //                                try
+            //                                {
+            //                                    channels[i].WriteInt32(0);
+            //                                    channels[i].Flush();
+            //                                }
+            //                                catch (SocketException)
+            //                                {
+            //                                    channels[i] = null;
+            //                                    // ignore -- server will readvertise itself and perform cleanup as part of it
+            //                                }
+            //                            }
+            //                        }
+            //                    }
+            //                    finally
+            //                    {
+            //                        smd.rwlock.ExitWriteLock();
+            //                    }
+
+            //                    // Inform the client that commit is complete by sending it the new epoch
+            //                    channel.WriteInt32(epochs.Last());
+            //                    channel.Flush();
+            //                }
+            //                var resp = channel.ReadInt32();
+            //                Contract.Assert(resp == 0);
+            //            };
+
+            //          openPart.AddTemporalRow(openPTLS, primaries,
+            //                          urlCellStrideLength, fwdCellStrideLength, bwdCellStrideLength,
+            //                          fwdCompression, bwdCompression,
+            //                          ReceiveUrls(channel), ReceiveLinks(channel),
+            //                          urlCellFinishedClosure, propagateBwdsClosure,
+            //                          urlMergeCompletedClosure, cellFinishedClosure, commitClosure);
+
+            //          break;
+            //      }
+            //      finally
+            //      {
+            //          if (this.isLeader)
+            //          {
+            //              smd.rwlock.ExitUpgradeableReadLock();
+            //          }
+            //      }
+            //  }
+            //  #endregion
             case (uint)OpCodes.MapOldToNewUids:
               #region
               {

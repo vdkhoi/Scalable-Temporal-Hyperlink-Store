@@ -1,0 +1,9 @@
+F:\Projects\SHS_Data\SHS.ConvertTemporalAdjListToBitMatrixAdjList.exe.config
+F:\Projects\SHS_Data\SHS.ConvertTemporalAdjListToBitMatrixAdjList.exe
+F:\Projects\SHS_Data\SHS.ConvertTemporalAdjListToBitMatrixAdjList.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ConvertTemporalAdjListToBitMatrixAdjList\obj\x64\Release\SHS.ConvertTemporalAdjListToBitMatrixAdjList.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ConvertTemporalAdjListToBitMatrixAdjList\obj\x64\Release\SHS.ConvertTemporalAdjListToBitMatrixAdjList.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ConvertTemporalAdjListToBitMatrixAdjList\obj\x64\Release\ConvertTemporalAdjListToBitMatrixAdjList.csprojResolveAssemblyReference.cache
+Z:\SHS\SHS_Data\SHS.ConvertTemporalAdjListToBitMatrixAdjList.exe.config
+Z:\SHS\SHS_Data\SHS.ConvertTemporalAdjListToBitMatrixAdjList.exe
+Z:\SHS\SHS_Data\SHS.ConvertTemporalAdjListToBitMatrixAdjList.pdb

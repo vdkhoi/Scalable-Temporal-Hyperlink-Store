@@ -24,7 +24,7 @@ namespace SHS {
     // Client to server
     CreatePartition     = 0xf1000014,  
     OpenPartition       = 0xf1000015,  
-    AddPageLinks              = 0xf1000016,
+    AddPageLinks        = 0xf1000016,
     Request             = 0xf1000017,
     Relinquish          = 0xf1000018,
     NumUrls             = 0xf1000019,
@@ -45,5 +45,6 @@ namespace SHS {
     BatchedSetUidState  = 0xf1000034,
     BatchedGetUidState  = 0xf1000035,
     CheckpointUidStates = 0xf1000036,
+    AddTemporalPageLinks = 0xf1000037,
   }
 }

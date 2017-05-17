@@ -6,3 +6,6 @@ F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalTools\bin\Release
 F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalTools\bin\Release\SHS.Library.pdb
 F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalTools\obj\Release\SHS.TemporalTools.exe
 F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\TemporalTools\obj\Release\SHS.TemporalTools.pdb
+F:\Projects\SHS_Data\SHS.TemporalTools.exe.config
+F:\Projects\SHS_Data\SHS.TemporalTools.exe
+F:\Projects\SHS_Data\SHS.TemporalTools.pdb

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
+using System.IO.Compression;
 
 namespace SHS {
   internal class Partition {
@@ -429,6 +430,78 @@ namespace SHS {
       }
     }
 
+
+    //Khoi add this function
+    public void AddTemporalData(string args1, StreamReader rd)
+    {
+        char[] Sep = { ' ', '\t' };
+        var d0 = Convert.ToDateTime("1998-01-01");
+        DateTime d = d0;
+        string[] links = null;
+        string line = "";
+        try
+        {
+
+            using (var wr = new BinaryWriter(new GZipStream(new FileStream(args1, FileMode.OpenOrCreate, FileAccess.Write), CompressionMode.Compress)))
+            {
+                using (var sorter = new DiskSorter<UidRevisionPair>(new UidRevisionPair.Comparer(this.ping), UidRevisionPair.Write, UidRevisionPair.Read, 1 << 20))
+                {
+
+                    
+                    
+
+                    while ((line = rd.ReadLine()) != null)
+                    {
+                        links = line.Split(Sep, StringSplitOptions.RemoveEmptyEntries);
+                        long timeS = (long)(Convert.ToDateTime(links[2]) - Convert.ToDateTime("1998-01-01")).TotalSeconds;
+                        long srcUrl = this.UrlToUid(Encoding.ASCII.GetBytes(links[0]), false);
+                        long dstUrl = this.UrlToUid(Encoding.ASCII.GetBytes(links[1]), false);
+                        sorter.Add(new UidRevisionPair { srcUid = srcUrl, timeStamp = timeS, dstUid = dstUrl });
+                    }
+                    sorter.Sort();
+
+                    UidRevisionPair temporalFwdLink = sorter.Get();
+                    var current = temporalFwdLink;
+
+                    
+
+                    while (!sorter.AtEnd())
+                    {
+
+                        wr.Write(current.srcUid);
+                        wr.Write(current.timeStamp);
+                        while ((current.srcUid == temporalFwdLink.srcUid) && (current.timeStamp == temporalFwdLink.timeStamp) && !sorter.AtEnd())
+                        {
+                            wr.Write(temporalFwdLink.dstUid);
+                            temporalFwdLink = sorter.Get();
+                        }
+
+                        // Consider to change to UUID here
+
+                        current = temporalFwdLink;
+
+                    }
+
+
+                    Console.WriteLine("Finished build links to adjacency list by string...");
+
+
+                }
+
+            }
+        }
+
+        catch (Exception)
+        {
+            Console.Error.WriteLine("Error in Temporal data building\r\n" + line);
+        }
+        finally
+        {
+
+        }
+
+    }
+
     internal void AddRow(ThreadLocalState partTLS,
                          string[] primaries,  // List of servers which contain primaries partitions
                          int urlStrideLen,
@@ -576,8 +649,9 @@ namespace SHS {
           }
         }
 
-        // Finish phase 1
+        // Finish phase 2
 
+        // For merge phase, very big f
         lock (this) {
           this.newCell.Reload();
           // newCell.urlCell is known to be loaded. If necessary load the fwd and bwd LinkCells.
@@ -793,415 +867,415 @@ namespace SHS {
     }
 
 
-    internal void AddTemporalRow(ThreadLocalState partTLS,
-                     string[] primaries,  // List of servers which contain primaries partitions
-                     int urlStrideLen,
-                     int fwdStrideLen,
-                     int bwdStrideLen,
-                     LinkCompression fwdCompression,
-                     LinkCompression bwdCompression,
-                     IEnumerable<byte[]> rowUrls,
-                     IEnumerable<Tuple<byte[], byte[][]>> rowLinks,
-                     Action UrlCellFinishedClosure,
-                     Func<List<Tuple<long, long>>, List<Tuple<long, long>>> PropagateBwdsClosure,
-                     Func<long, long[]> UrlMergeCompletedClosure,
-                     Action CellFinalizedClosure,
-                     Action<List<int>> CommitClosure)
-    {
-        this.cells.EnterUpgradeableReadLock();
-        var tfn = new TempFileNames();
-        try
-        {
-            //var sw = System.Diagnostics.Stopwatch.StartNew();
-            var newEpoch = this.Epoch + 1;
-            var numCellsToMerge = this.NumCellsToMerge();
-            var finalFileName = Cell.Name(this.spid, newEpoch);
-            var newFileName = numCellsToMerge == 1 ? finalFileName : tfn.New();
-            var newBaseUID = this.SupraUID;
-            long urlCnt = 0;
-            long newUrlCnt = 0; 
-            long patchPos1 = 0;
-            long patchPos2 = 0;
-            long patchPos3 = 0;
-            long numUrls = 0;
-            using (var urls = new DiskSorter<byte[]>(new EncString.Comparer(), EncString.Wr, EncString.Rd, 1 << 23))
-            {
-                foreach (var urlBytes in rowUrls)
-                {
-                    urlCnt++;
-                    // Check if the URL is already already in the partition, add it to urls if not
-                    int epoch;
-                    if (partTLS.partition.UrlToUid(partTLS, urlBytes, out epoch, false) == -1)
-                    {
-                        newUrlCnt++;
-                        urls.Add(urlBytes);
-                    }
-                }
-                //Console.Error.WriteLine("AddRow: URL receiving phase took {0} seconds; {1} URLs; {2} new", 0.001 * sw.ElapsedMilliseconds, urlCnt, newUrlCnt);
-                //sw.Restart();
-                // Write out the partial cell, with the link subcells missing
-                urls.Sort();
+    //internal void AddTemporalRow(ThreadLocalState partTLS,
+    //                 string[] primaries,  // List of servers which contain primaries partitions
+    //                 int urlStrideLen,
+    //                 int fwdStrideLen,
+    //                 int bwdStrideLen,
+    //                 LinkCompression fwdCompression,
+    //                 LinkCompression bwdCompression,
+    //                 IEnumerable<byte[]> rowUrls,
+    //                 IEnumerable<Tuple<byte[], byte[][], long>> rowLinks,   // URL, links, time stamp by long
+    //                 Action UrlCellFinishedClosure,
+    //                 Func<List<Tuple<long, long, long>>, List<Tuple<long, long, long>>> PropagateBwdsClosure,
+    //                 Func<long, long[]> UrlMergeCompletedClosure,
+    //                 Action CellFinalizedClosure,
+    //                 Action<List<int>> CommitClosure)
+    //{
+    //    this.cells.EnterUpgradeableReadLock();
+    //    var tfn = new TempFileNames();
+    //    try
+    //    {
+    //        //var sw = System.Diagnostics.Stopwatch.StartNew();
+    //        var newEpoch = this.Epoch + 1;
+    //        var numCellsToMerge = this.NumCellsToMerge();
+    //        var finalFileName = Cell.Name(this.spid, newEpoch);
+    //        var newFileName = numCellsToMerge == 1 ? finalFileName : tfn.New();
+    //        var newBaseUID = this.SupraUID;
+    //        long urlCnt = 0;
+    //        long newUrlCnt = 0; 
+    //        long patchPos1 = 0;
+    //        long patchPos2 = 0;
+    //        long patchPos3 = 0;
+    //        long numUrls = 0;
+    //        using (var urls = new DiskSorter<byte[]>(new EncString.Comparer(), EncString.Wr, EncString.Rd, 1 << 23))
+    //        {
+    //            foreach (var urlBytes in rowUrls)
+    //            {
+    //                urlCnt++;
+    //                // Check if the URL is already already in the partition, add it to urls if not
+    //                int epoch;
+    //                if (partTLS.partition.UrlToUid(partTLS, urlBytes, out epoch, false) == -1)
+    //                {
+    //                    newUrlCnt++;
+    //                    urls.Add(urlBytes);
+    //                }
+    //            }
+    //            //Console.Error.WriteLine("AddRow: URL receiving phase took {0} seconds; {1} URLs; {2} new", 0.001 * sw.ElapsedMilliseconds, urlCnt, newUrlCnt);
+    //            //sw.Restart();
+    //            // Write out the partial cell, with the link subcells missing
+    //            urls.Sort();
 
-                using (var wr = new BinaryWriter(new BufferedStream(new FileStream(newFileName, FileMode.Create, FileAccess.Write))))
-                {
-                    wr.Write(newBaseUID);
-                    wr.Write(newEpoch);
+    //            using (var wr = new BinaryWriter(new BufferedStream(new FileStream(newFileName, FileMode.Create, FileAccess.Write))))
+    //            {
+    //                wr.Write(newBaseUID);
+    //                wr.Write(newEpoch);
 
-                    patchPos1 = wr.BaseStream.Position;
-                    wr.Write(0L);   // placeholder for urlCell.numUrls 
-                    wr.Write(-1L);  // placeholder for urlCell.numBytes
-                    wr.Write(urlStrideLen);
+    //                patchPos1 = wr.BaseStream.Position;
+    //                wr.Write(0L);   // placeholder for urlCell.numUrls 
+    //                wr.Write(-1L);  // placeholder for urlCell.numBytes
+    //                wr.Write(urlStrideLen);
 
-                    patchPos2 = wr.BaseStream.Position;
-                    wr.Write(-1L); // placeholder for linkCell[0].numBytes
-                    wr.Write(0L);  // placeholder for linkCell[0].numLinks 
-                    wr.Write(fwdStrideLen);
-                    wr.Write((int)fwdCompression);  // Method to compress forward links {Nybble or VarNybble}
+    //                patchPos2 = wr.BaseStream.Position;
+    //                wr.Write(-1L); // placeholder for linkCell[0].numBytes
+    //                wr.Write(0L);  // placeholder for linkCell[0].numLinks 
+    //                wr.Write(fwdStrideLen);
+    //                wr.Write((int)fwdCompression);  // Method to compress forward links {Nybble or VarNybble}
 
-                    patchPos3 = wr.BaseStream.Position;
-                    wr.Write(-1L); // placeholder for linkCell[1].numBytes
-                    wr.Write(0L);  // placeholder for linkCell[1].numLinks
-                    wr.Write(bwdStrideLen);
-                    wr.Write((int)bwdCompression);  // Method to compress backward links {Nybble or VarNybble}
+    //                patchPos3 = wr.BaseStream.Position;
+    //                wr.Write(-1L); // placeholder for linkCell[1].numBytes
+    //                wr.Write(0L);  // placeholder for linkCell[1].numLinks
+    //                wr.Write(bwdStrideLen);
+    //                wr.Write((int)bwdCompression);  // Method to compress backward links {Nybble or VarNybble}
 
-                    var strComp = new FrontCodingStringCompressor(wr.BaseStream);
-                    byte[] last = EncString.Empty;
-                    while (!urls.AtEnd())
-                    {
-                        byte[] bytes = urls.Get();
-                        if (EncString.Compare(bytes, last) > 0)
-                        {
-                            strComp.WriteString(bytes);
-                            numUrls++;
-                        }
-                        last = bytes;
-                    }
+    //                var strComp = new FrontCodingStringCompressor(wr.BaseStream);
+    //                byte[] last = EncString.Empty;
+    //                while (!urls.AtEnd())
+    //                {
+    //                    byte[] bytes = urls.Get();
+    //                    if (EncString.Compare(bytes, last) > 0)
+    //                    {
+    //                        strComp.WriteString(bytes);
+    //                        numUrls++;
+    //                    }
+    //                    last = bytes;
+    //                }
 
-                    // Patch the persistings of urlCell.numUrls, urlCell.numSites, and urlCell.numBytes
-                    wr.BaseStream.Seek(patchPos1, SeekOrigin.Begin);
-                    wr.Write(numUrls);
-                    wr.Write(strComp.GetPosition());    // write url.numBytes
+    //                // Patch the persistings of urlCell.numUrls, urlCell.numSites, and urlCell.numBytes
+    //                wr.BaseStream.Seek(patchPos1, SeekOrigin.Begin);
+    //                wr.Write(numUrls);
+    //                wr.Write(strComp.GetPosition());    // write url.numBytes
 
-                    //Console.Error.WriteLine("AddRow: URL merge phase took {0} seconds; {1} unique URLs", 0.001 * sw.ElapsedMilliseconds, numUrls);
-                    //sw.Restart();
-                }
-            }
+    //                //Console.Error.WriteLine("AddRow: URL merge phase took {0} seconds; {1} unique URLs", 0.001 * sw.ElapsedMilliseconds, numUrls);
+    //                //sw.Restart();
+    //            }
+    //        }
 
-            lock (this)
-            {
-                this.newCell = new Cell(this, newFileName, true);
-                if (this.urlRefCnt > 0) this.newCell.urlCell.Load();
-            }
+    //        lock (this)
+    //        {
+    //            this.newCell = new Cell(this, newFileName, true);
+    //            if (this.urlRefCnt > 0) this.newCell.urlCell.Load();
+    //        }
 
-            // Notify the client that the URL sorting phase is done and the partition has a partial cell for epoch nextGen
-            UrlCellFinishedClosure();
+    //        // Notify the client that the URL sorting phase is done and the partition has a partial cell for epoch nextGen
+    //        UrlCellFinishedClosure();
 
-            var store = new Store(this.spid.storeID, this.ping, primaries); // Open store to write primary partitions
-            //store.SetUrlToUidCacheParams(20, 16);
+    //        var store = new Store(this.spid.storeID, this.ping, primaries); // Open store to write primary partitions
+    //        //store.SetUrlToUidCacheParams(20, 16);
 
-            long pairCnt = 0;
-            // Receive pairs of strings from the client and add them to the buildPod.
-            // Break when the client sends the string null. 
+    //        long pairCnt = 0;
+    //        // Receive pairs of strings from the client and add them to the buildPod.
+    //        // Break when the client sends the string null. 
 
-            var linkComparer = new UidPair.Comparer(ping);
-            using (var fwds = new DiskSorter<UidPair>(linkComparer, UidPair.Write, UidPair.Read, 1 << 25))
-            {
-                using (var bwds = new DiskSorter<UidPair>(linkComparer, UidPair.Write, UidPair.Read, 1 << 25))
-                {
-                    var batch = new LinkBatch(store, fwds);
-                    foreach (var tup in rowLinks)
-                    {   // rowLinks is yeald return field
-                        int epoch;
-                        var urlBytes1 = tup.Item1;
-                        Contract.Assert(ping.PartitionID(Encoding.UTF8.GetString(urlBytes1)) == this.spid.partID);
-                        long uid1 = partTLS.partition.UrlToUid(partTLS, urlBytes1, out epoch, true);
-                        Contract.Assert(uid1 != -1);
+    //        var linkComparer = new UidRevisionPair.Comparer(ping);
+    //        using (var fwds = new DiskSorter<UidRevisionPair>(linkComparer, UidRevisionPair.Write, UidRevisionPair.Read, 1 << 25))
+    //        {
+    //            using (var bwds = new DiskSorter<UidRevisionPair>(linkComparer, UidRevisionPair.Write, UidRevisionPair.Read, 1 << 25))
+    //            {
+    //                var batch = new LinkBatch(store, fwds);
+    //                foreach (var tup in rowLinks)
+    //                {   // rowLinks is yeald return field
+    //                    int epoch;
+    //                    var urlBytes1 = tup.Item1;
+    //                    Contract.Assert(ping.PartitionID(Encoding.UTF8.GetString(urlBytes1)) == this.spid.partID);
+    //                    long uid1 = partTLS.partition.UrlToUid(partTLS, urlBytes1, out epoch, true);
+    //                    Contract.Assert(uid1 != -1);
 
-                        // Add the record (uid1,-1) to fwds, to indicate to WriteLinkCells that this page was crawled.
-                        fwds.Add(new UidPair { srcUid = uid1, dstUid = -1 });
+    //                    // Add the record (uid1,-1) to fwds, to indicate to WriteLinkCells that this page was crawled.
+    //                    fwds.Add(new UidPair { srcUid = uid1, dstUid = -1 });
 
-                        foreach (var urlBytes2 in tup.Item2)
-                        {
-                            pairCnt++;
-                            var url2 = Encoding.UTF8.GetString(urlBytes2);
-                            if (ping.PartitionID(url2) == this.spid.partID)
-                            {           // Check if current url is responsible by current server
-                                var uid2 = partTLS.partition.UrlToUid(partTLS, urlBytes2, out epoch, true);  // Get uids of current urls
-                                fwds.Add(new UidPair { srcUid = uid1, dstUid = uid2 });   // Add the pairs into sorter
-                            }
-                            else
-                            {
-                                batch.Add(uid1, url2);                                    // Put all urls which are not responsible by current server into batch
-                            }
-                        }
-                    }
-                    //Console.Error.WriteLine("AddRow: client transmitted {0} URL pairs", pairCnt);
-                    batch.Process();                                                // Get uids from other servers and put it directly into fwds variable
+    //                    foreach (var urlBytes2 in tup.Item2)
+    //                    {
+    //                        pairCnt++;
+    //                        var url2 = Encoding.UTF8.GetString(urlBytes2);
+    //                        if (ping.PartitionID(url2) == this.spid.partID)
+    //                        {           // Check if current url is responsible by current server
+    //                            var uid2 = partTLS.partition.UrlToUid(partTLS, urlBytes2, out epoch, true);  // Get uids of current urls
+    //                            fwds.Add(new UidPair { srcUid = uid1, dstUid = uid2 });   // Add the pairs into sorter
+    //                        }
+    //                        else
+    //                        {
+    //                            batch.Add(uid1, url2);                                    // Put all urls which are not responsible by current server into batch
+    //                        }
+    //                    }
+    //                }
+    //                //Console.Error.WriteLine("AddRow: client transmitted {0} URL pairs", pairCnt);
+    //                batch.Process();                                                // Get uids from other servers and put it directly into fwds variable
 
-                    //Console.Error.WriteLine("AddRow: Link collection phase took {0} seconds", 0.001 * sw.ElapsedMilliseconds);
-                    //sw.Restart();
+    //                //Console.Error.WriteLine("AddRow: Link collection phase took {0} seconds", 0.001 * sw.ElapsedMilliseconds);
+    //                //sw.Restart();
 
-                    var bwdProp = new BwdsPropagator(this, bwds, PropagateBwdsClosure);  // For each outlink, propagate the information to other server to update backward links
+    //                var bwdProp = new BwdsPropagator(this, bwds, PropagateBwdsClosure);  // For each outlink, propagate the information to other server to update backward links
 
-                    // Merge backward and forward into temmp files or into a cell
-                    using (var wr = new BinaryWriter(new BufferedStream(new FileStream(newFileName, FileMode.Open, FileAccess.Write))))
-                    {
-                        var numFwds = this.WriteLinkCell(wr, partTLS, newBaseUID, numUrls, bwdProp, 0, fwds, patchPos2, fwdStrideLen, IntStreamCompressor.New(fwdCompression));
-                        var numBwds = this.WriteLinkCell(wr, partTLS, newBaseUID, numUrls, null, 1, bwds, patchPos3, bwdStrideLen, IntStreamCompressor.New(bwdCompression));
-                        //Console.Error.WriteLine("AddRow: Link merge phase took {0} seconds, {1} fwd links, {2} bwd links",
-                        //                        0.001 * sw.ElapsedMilliseconds, numFwds, numBwds);
-                        //sw.Restart();
-                        //
-                    }
-                }
-            }
+    //                // Merge backward and forward into temmp files or into a cell
+    //                using (var wr = new BinaryWriter(new BufferedStream(new FileStream(newFileName, FileMode.Open, FileAccess.Write))))
+    //                {
+    //                    var numFwds = this.WriteLinkCell(wr, partTLS, newBaseUID, numUrls, bwdProp, 0, fwds, patchPos2, fwdStrideLen, IntStreamCompressor.New(fwdCompression));
+    //                    var numBwds = this.WriteLinkCell(wr, partTLS, newBaseUID, numUrls, null, 1, bwds, patchPos3, bwdStrideLen, IntStreamCompressor.New(bwdCompression));
+    //                    //Console.Error.WriteLine("AddRow: Link merge phase took {0} seconds, {1} fwd links, {2} bwd links",
+    //                    //                        0.001 * sw.ElapsedMilliseconds, numFwds, numBwds);
+    //                    //sw.Restart();
+    //                    //
+    //                }
+    //            }
+    //        }
 
-            lock (this)
-            {
-                this.newCell.Reload();
-                // newCell.urlCell is known to be loaded. If necessary load the fwd and bwd LinkCells.
-                Contract.Assert(this.urlRefCnt > 0 && newCell.urlCell.IsLoaded);
-                if (this.linkRefCnt[0] > 0) newCell.linkCell[0].Load();
-                if (this.linkRefCnt[1] > 0) newCell.linkCell[1].Load();
-            }
+    //        lock (this)
+    //        {
+    //            this.newCell.Reload();
+    //            // newCell.urlCell is known to be loaded. If necessary load the fwd and bwd LinkCells.
+    //            Contract.Assert(this.urlRefCnt > 0 && newCell.urlCell.IsLoaded);
+    //            if (this.linkRefCnt[0] > 0) newCell.linkCell[0].Load();
+    //            if (this.linkRefCnt[1] > 0) newCell.linkCell[1].Load();
+    //        }
 
-            if (numCellsToMerge == 1)
-            {
-                // Invoking "CellFinalizedClosure" signals the clerk that this advertisedServer
-                // has finalized the merged cell and is ready to advance the epoch.
-                // "CellFinalizedClosure" returns after all servers have signaled
-                // the clerk, and the clerk has replied to all advertisedServer to proceed.
-                // This needs to happen before acquiring rwlock, since otherwise 
-                // there is a potential for deadlock, since other servers may still
-                // need to resolve URLs (calling "PrivilegedUrlToUid" on this advertisedServer),
-                // which requires a read-share of rwlock.
-                CellFinalizedClosure();
-                this.cells.EnterWriteLock();
-                try
-                {
-                    // Notify the leader that this.rwlock is held and update can be committed
-                    CommitClosure(this.cells.EpochsPostUpdate(0, this.newCell));
+    //        if (numCellsToMerge == 1)
+    //        {
+    //            // Invoking "CellFinalizedClosure" signals the clerk that this advertisedServer
+    //            // has finalized the merged cell and is ready to advance the epoch.
+    //            // "CellFinalizedClosure" returns after all servers have signaled
+    //            // the clerk, and the clerk has replied to all advertisedServer to proceed.
+    //            // This needs to happen before acquiring rwlock, since otherwise 
+    //            // there is a potential for deadlock, since other servers may still
+    //            // need to resolve URLs (calling "PrivilegedUrlToUid" on this advertisedServer),
+    //            // which requires a read-share of rwlock.
+    //            CellFinalizedClosure();
+    //            this.cells.EnterWriteLock();
+    //            try
+    //            {
+    //                // Notify the leader that this.rwlock is held and update can be committed
+    //                CommitClosure(this.cells.EpochsPostUpdate(0, this.newCell));
 
-                    this.cells.Update(0, this.newCell);
-                    this.newCell = null;
-                }
-                finally
-                {
-                    this.cells.ExitWriteLock();
-                }
-            }
-            else
-            {
-                Contract.Assert(this.mapperBundle == null);
-                // Verify that the input cells meet the code contract 
-                var mergeCells = new Cell[numCellsToMerge];
-                for (int i = 0; i < numCellsToMerge - 1; i++)
-                {
-                    mergeCells[i] = this.cells[this.cells.Count - (numCellsToMerge - 1) + i];
-                }
-                mergeCells[numCellsToMerge - 1] = this.newCell;
+    //                this.cells.Update(0, this.newCell);
+    //                this.newCell = null;
+    //            }
+    //            finally
+    //            {
+    //                this.cells.ExitWriteLock();
+    //            }
+    //        }
+    //        else
+    //        {
+    //            Contract.Assert(this.mapperBundle == null);
+    //            // Verify that the input cells meet the code contract 
+    //            var mergeCells = new Cell[numCellsToMerge];
+    //            for (int i = 0; i < numCellsToMerge - 1; i++)
+    //            {
+    //                mergeCells[i] = this.cells[this.cells.Count - (numCellsToMerge - 1) + i];
+    //            }
+    //            mergeCells[numCellsToMerge - 1] = this.newCell;
 
-                Contract.Assert(Contract.ForAll(1, numCellsToMerge, i => mergeCells[i - 1].supraUID == mergeCells[i].baseUID));
+    //            Contract.Assert(Contract.ForAll(1, numCellsToMerge, i => mergeCells[i - 1].supraUID == mergeCells[i].baseUID));
 
-                // Write out the header portion of the new cell
-                using (var wr = new BinaryWriter(new BufferedStream(new FileStream(finalFileName, FileMode.Create, FileAccess.Write))))
-                {
-                    wr.Write(mergeCells[0].baseUID);
-                    wr.Write(mergeCells[numCellsToMerge - 1].epoch);
+    //            // Write out the header portion of the new cell
+    //            using (var wr = new BinaryWriter(new BufferedStream(new FileStream(finalFileName, FileMode.Create, FileAccess.Write))))
+    //            {
+    //                wr.Write(mergeCells[0].baseUID);
+    //                wr.Write(mergeCells[numCellsToMerge - 1].epoch);
 
-                    patchPos1 = wr.BaseStream.Position;
-                    wr.Write(0L);   // placeholder for urlCell.numUrls 
-                    wr.Write(-1L);  // placeholder for urlCell.numBytes
-                    wr.Write(mergeCells[numCellsToMerge - 1].urlCell.indexStride);
+    //                patchPos1 = wr.BaseStream.Position;
+    //                wr.Write(0L);   // placeholder for urlCell.numUrls 
+    //                wr.Write(-1L);  // placeholder for urlCell.numBytes
+    //                wr.Write(mergeCells[numCellsToMerge - 1].urlCell.indexStride);
 
-                    patchPos2 = wr.BaseStream.Position;
-                    var fwdStride = mergeCells[numCellsToMerge - 1].linkCell[0].indexStride;
-                    var fwdComprCode = mergeCells[numCellsToMerge - 1].linkCell[0].compressionCode;
-                    wr.Write(-1L); // placeholder for linkCell[0].numBytes
-                    wr.Write(0L);  // placeholder for linkCell[0].numLinks 
-                    wr.Write(fwdStride);
-                    wr.Write((int)fwdComprCode);
+    //                patchPos2 = wr.BaseStream.Position;
+    //                var fwdStride = mergeCells[numCellsToMerge - 1].linkCell[0].indexStride;
+    //                var fwdComprCode = mergeCells[numCellsToMerge - 1].linkCell[0].compressionCode;
+    //                wr.Write(-1L); // placeholder for linkCell[0].numBytes
+    //                wr.Write(0L);  // placeholder for linkCell[0].numLinks 
+    //                wr.Write(fwdStride);
+    //                wr.Write((int)fwdComprCode);
 
-                    patchPos3 = wr.BaseStream.Position;
-                    var bwdStride = mergeCells[numCellsToMerge - 1].linkCell[1].indexStride;
-                    var bwdComprCode = mergeCells[numCellsToMerge - 1].linkCell[1].compressionCode;
-                    wr.Write(-1L); // placeholder for linkCell[1].numBytes
-                    wr.Write(0L);  // placeholder for linkCell[1].numLinks
-                    wr.Write(bwdStride);
-                    wr.Write((int)bwdComprCode);
+    //                patchPos3 = wr.BaseStream.Position;
+    //                var bwdStride = mergeCells[numCellsToMerge - 1].linkCell[1].indexStride;
+    //                var bwdComprCode = mergeCells[numCellsToMerge - 1].linkCell[1].compressionCode;
+    //                wr.Write(-1L); // placeholder for linkCell[1].numBytes
+    //                wr.Write(0L);  // placeholder for linkCell[1].numLinks
+    //                wr.Write(bwdStride);
+    //                wr.Write((int)bwdComprCode);
 
-                    // Create an array of temp file names for the old-to-new-UID map writers
-                    var tmpNames = new string[numCellsToMerge];
-                    for (int i = 0; i < numCellsToMerge; i++)
-                    {
-                        tmpNames[i] = tfn.New();
-                    }
+    //                // Create an array of temp file names for the old-to-new-UID map writers
+    //                var tmpNames = new string[numCellsToMerge];
+    //                for (int i = 0; i < numCellsToMerge; i++)
+    //                {
+    //                    tmpNames[i] = tfn.New();
+    //                }
 
-                    var heap = new UrlCellHeapElem[numCellsToMerge];
-                    var pos = 0;
-                    for (int i = 0; i < numCellsToMerge; i++)
-                    {
-                        var oldNewMapWr = new BinaryWriter(new FileStream(tmpNames[i], FileMode.Create, FileAccess.Write));
-                        var oldNewMapCompr = new VarNybbleIntStreamCompressor();
-                        oldNewMapCompr.SetWriter(oldNewMapWr);
-                        var elem = new UrlCellHeapElem
-                        {
-                            cellIdx = i,
-                            urls = mergeCells[i].urlCell.Urls().GetEnumerator(),
-                            cnt = 0,
-                            numUrls = mergeCells[i].numUrls,
-                            currCuid = 0,
-                            prevOldNewGap = 0,
-                            oldNewMapWr = oldNewMapWr,
-                            oldNewMapCompr = oldNewMapCompr
-                        };
-                        if (elem.urls.MoveNext())
-                        {
-                            heap[pos] = elem;
-                            int x = pos;
-                            while (x > 0)
-                            {
-                                int p = (x - 1) / 2;
-                                if (EncString.Compare(heap[p].urls.Current, heap[x].urls.Current) < 0) break;
-                                var e = heap[p]; heap[p] = heap[x]; heap[x] = e;
-                                x = p;
-                            }
-                            pos++;
-                        }
-                        else
-                        {
-                            Contract.Assert(elem.cnt == elem.numUrls);
-                            elem.urls = null;
-                            elem.oldNewMapWr.Close();
-                        }
-                    }
-                    // Iterate until heap is empty
-                    long newCuid = 0;
-                    const long mapStrideLength = 1024;
+    //                var heap = new UrlCellHeapElem[numCellsToMerge];
+    //                var pos = 0;
+    //                for (int i = 0; i < numCellsToMerge; i++)
+    //                {
+    //                    var oldNewMapWr = new BinaryWriter(new FileStream(tmpNames[i], FileMode.Create, FileAccess.Write));
+    //                    var oldNewMapCompr = new VarNybbleIntStreamCompressor();
+    //                    oldNewMapCompr.SetWriter(oldNewMapWr);
+    //                    var elem = new UrlCellHeapElem
+    //                    {
+    //                        cellIdx = i,
+    //                        urls = mergeCells[i].urlCell.Urls().GetEnumerator(),
+    //                        cnt = 0,
+    //                        numUrls = mergeCells[i].numUrls,
+    //                        currCuid = 0,
+    //                        prevOldNewGap = 0,
+    //                        oldNewMapWr = oldNewMapWr,
+    //                        oldNewMapCompr = oldNewMapCompr
+    //                    };
+    //                    if (elem.urls.MoveNext())
+    //                    {
+    //                        heap[pos] = elem;
+    //                        int x = pos;
+    //                        while (x > 0)
+    //                        {
+    //                            int p = (x - 1) / 2;
+    //                            if (EncString.Compare(heap[p].urls.Current, heap[x].urls.Current) < 0) break;
+    //                            var e = heap[p]; heap[p] = heap[x]; heap[x] = e;
+    //                            x = p;
+    //                        }
+    //                        pos++;
+    //                    }
+    //                    else
+    //                    {
+    //                        Contract.Assert(elem.cnt == elem.numUrls);
+    //                        elem.urls = null;
+    //                        elem.oldNewMapWr.Close();
+    //                    }
+    //                }
+    //                // Iterate until heap is empty
+    //                long newCuid = 0;
+    //                const long mapStrideLength = 1024;
 
-                    var strComp = new FrontCodingStringCompressor(wr.BaseStream);
-                    var idxFile = tfn.New();
-                    using (var idxWr = new BinaryWriter(new FileStream(idxFile, FileMode.Create, FileAccess.Write)))
-                    {
-                        while (pos > 0)
-                        {
-                            // Get the top heap element 
-                            var elem = heap[0];
+    //                var strComp = new FrontCodingStringCompressor(wr.BaseStream);
+    //                var idxFile = tfn.New();
+    //                using (var idxWr = new BinaryWriter(new FileStream(idxFile, FileMode.Create, FileAccess.Write)))
+    //                {
+    //                    while (pos > 0)
+    //                    {
+    //                        // Get the top heap element 
+    //                        var elem = heap[0];
 
-                            // Write the url to the URL cell portion of the new cell, adjust 
-                            // cnt, currCuid and prevOldNewGap, and write uid-to-uid 
-                            // translation entries
-                            strComp.WriteString(elem.urls.Current);
-                            var oldNewGap = newCuid - elem.currCuid;  // the difference between this URL in the old and the new cell-local UID space
-                            Contract.Assert(oldNewGap >= 0);
-                            var delta = oldNewGap - elem.prevOldNewGap;
-                            Contract.Assert(delta >= 0);
-                            elem.oldNewMapCompr.PutUInt64((ulong)delta);
-                            elem.prevOldNewGap = oldNewGap;
-                            elem.currCuid++;
-                            elem.cnt++;
-                            newCuid++;
-                            if (elem.cnt % mapStrideLength == 0) elem.oldNewMapCompr.Align();
-                            idxWr.Write(elem.cellIdx);
+    //                        // Write the url to the URL cell portion of the new cell, adjust 
+    //                        // cnt, currCuid and prevOldNewGap, and write uid-to-uid 
+    //                        // translation entries
+    //                        strComp.WriteString(elem.urls.Current);
+    //                        var oldNewGap = newCuid - elem.currCuid;  // the difference between this URL in the old and the new cell-local UID space
+    //                        Contract.Assert(oldNewGap >= 0);
+    //                        var delta = oldNewGap - elem.prevOldNewGap;
+    //                        Contract.Assert(delta >= 0);
+    //                        elem.oldNewMapCompr.PutUInt64((ulong)delta);
+    //                        elem.prevOldNewGap = oldNewGap;
+    //                        elem.currCuid++;
+    //                        elem.cnt++;
+    //                        newCuid++;
+    //                        if (elem.cnt % mapStrideLength == 0) elem.oldNewMapCompr.Align();
+    //                        idxWr.Write(elem.cellIdx);
 
-                            // Advance the URL enumerator, and remove heap[0] from the heap 
-                            if (!elem.urls.MoveNext())
-                            {
-                                Contract.Assert(elem.cnt == elem.numUrls);
-                                elem.urls = null;
-                                elem.oldNewMapCompr.Align();
-                                elem.oldNewMapWr.Close();
-                                heap[0] = heap[--pos];
-                                heap[pos] = null;
-                            }
-                            // re-establish the heap property
-                            int x = 0;
-                            while (x < pos)
-                            {
-                                int c = 2 * x + 1;
-                                if (c >= pos)
-                                {
-                                    break;
-                                }
-                                else if (c + 1 < pos)
-                                {
-                                    if (EncString.Compare(heap[c].urls.Current, heap[c + 1].urls.Current) > 0) c = c + 1;
-                                }
-                                if (EncString.Compare(heap[x].urls.Current, heap[c].urls.Current) > 0)
-                                {
-                                    var e = heap[x]; heap[x] = heap[c]; heap[c] = e;
-                                    x = c;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
+    //                        // Advance the URL enumerator, and remove heap[0] from the heap 
+    //                        if (!elem.urls.MoveNext())
+    //                        {
+    //                            Contract.Assert(elem.cnt == elem.numUrls);
+    //                            elem.urls = null;
+    //                            elem.oldNewMapCompr.Align();
+    //                            elem.oldNewMapWr.Close();
+    //                            heap[0] = heap[--pos];
+    //                            heap[pos] = null;
+    //                        }
+    //                        // re-establish the heap property
+    //                        int x = 0;
+    //                        while (x < pos)
+    //                        {
+    //                            int c = 2 * x + 1;
+    //                            if (c >= pos)
+    //                            {
+    //                                break;
+    //                            }
+    //                            else if (c + 1 < pos)
+    //                            {
+    //                                if (EncString.Compare(heap[c].urls.Current, heap[c + 1].urls.Current) > 0) c = c + 1;
+    //                            }
+    //                            if (EncString.Compare(heap[x].urls.Current, heap[c].urls.Current) > 0)
+    //                            {
+    //                                var e = heap[x]; heap[x] = heap[c]; heap[c] = e;
+    //                                x = c;
+    //                            }
+    //                            else
+    //                            {
+    //                                break;
+    //                            }
+    //                        }
 
-                        }
-                    }
-                    wr.BaseStream.Seek(patchPos1, SeekOrigin.Begin);
-                    wr.Write(newCuid);
-                    wr.Write(strComp.GetPosition());
+    //                    }
+    //                }
+    //                wr.BaseStream.Seek(patchPos1, SeekOrigin.Begin);
+    //                wr.Write(newCuid);
+    //                wr.Write(strComp.GetPosition());
 
-                    this.mapperBundle = new UidSpaceMapperBundle(mapStrideLength, mergeCells, tmpNames);
+    //                this.mapperBundle = new UidSpaceMapperBundle(mapStrideLength, mergeCells, tmpNames);
 
-                    // Signal the clerk that the URL cells have been merged, and transmit 
-                    // the minimal minUrlUid; receive a vector of minUrlUids for all 
-                    // partitions of the store
-                    var partBaseUids = UrlMergeCompletedClosure(mergeCells[0].baseUID);
+    //                // Signal the clerk that the URL cells have been merged, and transmit 
+    //                // the minimal minUrlUid; receive a vector of minUrlUids for all 
+    //                // partitions of the store
+    //                var partBaseUids = UrlMergeCompletedClosure(mergeCells[0].baseUID);
 
-                    // Merge the forward and backward link cells
-                    this.MergeLinkCells(mergeCells, 0, partTLS, partBaseUids, store, wr, idxFile, patchPos2, fwdStride, IntStreamCompressor.New((LinkCompression)fwdComprCode));
-                    this.MergeLinkCells(mergeCells, 1, partTLS, partBaseUids, store, wr, idxFile, patchPos3, bwdStride, IntStreamCompressor.New((LinkCompression)bwdComprCode));
-                }
-
-
-                // Invoking "CellFinalizedClosure" signals the clerk that this advertisedServer
-                // has finalized the merged cell and is ready to advance the epoch.
-                // "CellFinishedClosure" returns after all servers have signaled
-                // the clerk, and the clerk has replied to all advertisedServer to proceed.
-                // This needs to happen before acquiring rwlock, since otherwise 
-                // there is a potential for deadlock, since other servers may still
-                // need to resolve URLs (calling "PrivilegedUrlToUid" on this advertisedServer),
-                // which requires a read-share of rwlock.
-                CellFinalizedClosure();
-                this.cells.EnterWriteLock();  // Acquire the Write share of the RW lock 
-                try
-                {
-                    // Notify the leader that this.rwlock is held and update can be committed
-                    this.newCell = null;
-                    var mergedCell = new Cell(this, finalFileName, false);
-                    CommitClosure(this.cells.EpochsPostUpdate(numCellsToMerge - 1, mergedCell));
-                    lock (this)
-                    {
-                        this.cells.Update(numCellsToMerge - 1, mergedCell);
-                        if (this.urlRefCnt > 0) mergedCell.urlCell.Load();
-                        if (this.linkRefCnt[0] > 0) mergedCell.linkCell[0].Load();
-                        if (this.linkRefCnt[1] > 0) mergedCell.linkCell[1].Load();
-                    }
+    //                // Merge the forward and backward link cells
+    //                this.MergeLinkCells(mergeCells, 0, partTLS, partBaseUids, store, wr, idxFile, patchPos2, fwdStride, IntStreamCompressor.New((LinkCompression)fwdComprCode));
+    //                this.MergeLinkCells(mergeCells, 1, partTLS, partBaseUids, store, wr, idxFile, patchPos3, bwdStride, IntStreamCompressor.New((LinkCompression)bwdComprCode));
+    //            }
 
 
-                    foreach (var cell in mergeCells)
-                    {
-                        File.Delete(cell.fileName);  // delete the underlying file
-                    }
-                }
-                finally
-                {
-                    this.cells.ExitWriteLock();  // Release the write share of the RW lock
-                }
-            }
-            //Console.Error.WriteLine("AddRow completed; took {0} seconds total", 0.001 * sw.ElapsedMilliseconds);
-        }
-        finally
-        {
-            tfn.CleanThis();           // Delete temporary files produced during this AddRow
-            this.mapperBundle = null;  // Making mapperBundle unreachable allows GC
-            this.newCell = null;
-            this.cells.ExitUpgradeableReadLock();
-        }
-    }
+    //            // Invoking "CellFinalizedClosure" signals the clerk that this advertisedServer
+    //            // has finalized the merged cell and is ready to advance the epoch.
+    //            // "CellFinishedClosure" returns after all servers have signaled
+    //            // the clerk, and the clerk has replied to all advertisedServer to proceed.
+    //            // This needs to happen before acquiring rwlock, since otherwise 
+    //            // there is a potential for deadlock, since other servers may still
+    //            // need to resolve URLs (calling "PrivilegedUrlToUid" on this advertisedServer),
+    //            // which requires a read-share of rwlock.
+    //            CellFinalizedClosure();
+    //            this.cells.EnterWriteLock();  // Acquire the Write share of the RW lock 
+    //            try
+    //            {
+    //                // Notify the leader that this.rwlock is held and update can be committed
+    //                this.newCell = null;
+    //                var mergedCell = new Cell(this, finalFileName, false);
+    //                CommitClosure(this.cells.EpochsPostUpdate(numCellsToMerge - 1, mergedCell));
+    //                lock (this)
+    //                {
+    //                    this.cells.Update(numCellsToMerge - 1, mergedCell);
+    //                    if (this.urlRefCnt > 0) mergedCell.urlCell.Load();
+    //                    if (this.linkRefCnt[0] > 0) mergedCell.linkCell[0].Load();
+    //                    if (this.linkRefCnt[1] > 0) mergedCell.linkCell[1].Load();
+    //                }
+
+
+    //                foreach (var cell in mergeCells)
+    //                {
+    //                    File.Delete(cell.fileName);  // delete the underlying file
+    //                }
+    //            }
+    //            finally
+    //            {
+    //                this.cells.ExitWriteLock();  // Release the write share of the RW lock
+    //            }
+    //        }
+    //        //Console.Error.WriteLine("AddRow completed; took {0} seconds total", 0.001 * sw.ElapsedMilliseconds);
+    //    }
+    //    finally
+    //    {
+    //        tfn.CleanThis();           // Delete temporary files produced during this AddRow
+    //        this.mapperBundle = null;  // Making mapperBundle unreachable allows GC
+    //        this.newCell = null;
+    //        this.cells.ExitUpgradeableReadLock();
+    //    }
+    //}
 
     internal string NextCellName() {
       this.cells.EnterReadLock();
@@ -1698,6 +1772,57 @@ namespace SHS {
       }
     }
 
+
+    //private class RevisionLinkBatch
+    //{
+    //    private readonly Store store;
+    //    private readonly DiskSorter<UidRevisionPair> fwds;
+    //    private int cnt;
+    //    private string[] urls;
+    //    private long[] uids;
+
+    //    internal RevisionLinkBatch(Store store, DiskSorter<UidRevisionPair> fwds)
+    //    {
+    //        this.store = store;
+    //        this.fwds = fwds;
+    //        this.cnt = 0;
+    //        this.urls = new string[100000];
+    //        this.uids = new Int64[100000];
+    //    }
+
+    //    internal void Add(long uid, string url)
+    //    {
+    //        Contract.Requires(uid != -1);
+    //        if (this.cnt == this.urls.Length)
+    //        {
+    //            this.Process();
+    //        }
+    //        this.uids[this.cnt] = uid;
+    //        this.urls[this.cnt] = url;
+    //        this.cnt++;
+    //    }
+
+    //    internal void Process()
+    //    {
+    //        var remUrls = this.urls.Length == this.cnt ? this.urls : RightSize(this.urls, this.cnt);
+    //        var remUids = store.PrivilegedUrlToUid(remUrls);
+    //        for (int i = 0; i < this.cnt; i++)
+    //        {
+    //            Contract.Assert(remUids[i] != -1);
+    //            fwds.Add(new UidRevisionPair { srcUid = this.uids[i], dstUid = remUids[i], timeStamp =  });
+    //            this.urls[i] = null;
+    //        }
+    //        this.cnt = 0;
+    //    }
+
+    //    private static T[] RightSize<T>(T[] a, int n)
+    //    {
+    //        var tmp = new T[n];
+    //        Array.Copy(a, tmp, n);
+    //        return tmp;
+    //    }
+    //}
+
     private class BwdsPropagator {
       private Partition partition;
       private Func<List<Tuple<long, long>>, List<Tuple<long, long>>> propagateBwdsClosure;
@@ -1784,6 +1909,80 @@ namespace SHS {
           }
         }
       }
+    }
+
+    private struct UidRevisionPair
+    {
+        internal Int64 srcUid;
+        internal Int64 dstUid;
+        internal Int64 timeStamp;
+
+        internal static UidRevisionPair Read(BinaryReader rd)
+        {
+            var srcUid = rd.ReadInt64();
+            var dstUid = rd.ReadInt64();
+            var time = rd.ReadInt64();
+            return new UidRevisionPair { srcUid = srcUid, dstUid = dstUid, timeStamp = time};
+        }
+
+        internal static void Write(BinaryWriter wr, UidRevisionPair pair)
+        {
+            wr.Write(pair.srcUid);
+            wr.Write(pair.dstUid);
+            wr.Write(pair.timeStamp);
+        }
+
+        internal class Comparer : System.Collections.Generic.Comparer<UidRevisionPair>
+        {
+            private Partitioning ping;
+
+            internal Comparer(Partitioning ping)
+            {
+                this.ping = ping;
+            }
+
+            public override int Compare(UidRevisionPair a, UidRevisionPair b)
+            {
+                var aSrc = ping.PUID(a.srcUid);
+                var bSrc = ping.PUID(b.srcUid);
+                if (aSrc < bSrc)
+                {
+                    return -1;
+                }
+                else if (aSrc > bSrc)
+                {
+                    return +1;
+                }
+                else
+                {
+                    if (a.timeStamp < b.timeStamp)
+                    {
+                        return -1;
+                    }
+                    else if (a.timeStamp == b.timeStamp)
+                    {
+                        var aDst = UID.ClrDeletedBit(a.dstUid);
+                        var bDst = UID.ClrDeletedBit(b.dstUid);
+                        if (aDst < bDst)
+                        {
+                            return -1;
+                        }
+                        else if (aDst > bDst)
+                        {
+                            return +1;
+                        }
+                        else
+                        {
+                            return 0;
+                        }
+                    }
+                    else
+                    {
+                        return +1;
+                    }
+                }
+            }
+        }
     }
 
     private class UrlCellHeapElem {

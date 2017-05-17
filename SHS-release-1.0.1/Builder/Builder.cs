@@ -132,7 +132,7 @@ namespace SHS {
 
               this.current.pageSrcUrl = line[0];
               this.current.pageDstUrl = line[1];
-              this.current.out_degree = Convert.ToInt32(line[3]);
+              this.current.outDegree = Convert.ToInt32(line[3]);
               return true;
           }
           catch (EndOfStreamException)

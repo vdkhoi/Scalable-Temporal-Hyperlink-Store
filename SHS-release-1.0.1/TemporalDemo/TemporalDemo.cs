@@ -15,21 +15,21 @@ namespace SHS
         //public long nodeId;
         public int number_of_revision;
         public int outlink_vector_size;
-        public DateTime first_time_stamp;
         public long[] time_duration;
-        public byte[][] revision_matrix;
+        public byte[] revision_matrix;
     }
 
     public class RevisionData
     {
         
         //public static int NUM_RECORDS = 18444488;
-        public static int TEMP_BUFF = 10000;
+        public static long TEMP_BUFF = 10000;
         //public static int NUM_RECORDS = 503101;  //From Jan-2013
-        public static int NUM_RECORDS = 1030208;  //From Jan-to-Mar-2013
+        public static long NUM_RECORDS = 0;  //From Jan-to-Mar-2013
         //public static int TEMP_BUFF = 47;
         public node_revision_info[] revision_data;
         public int[] pointer = new int[NUM_RECORDS];
+        public long NUM_LINKS = 0;
         public UidMap nodeMap;
         public RevisionData(string revision_file)
         {
@@ -39,45 +39,41 @@ namespace SHS
                 int i = 0;
                 try
                 {
+                    NUM_RECORDS = rd.ReadInt64();
+                    NUM_LINKS = rd.ReadInt64();
                     revision_data = new node_revision_info[NUM_RECORDS];
                     uuid = new long[NUM_RECORDS];
                     for (i = 0; i < NUM_RECORDS; i++)
                     {
                         uuid[i] = (long)rd.ReadInt64();
                         //Console.Write("{0} ", uuid[i]);
-                        revision_data[i].number_of_revision = rd.ReadInt32();
-                        //Console.Write("{0} ", revision_data[i].number_of_revision);
                         revision_data[i].outlink_vector_size = rd.ReadInt32();
                         //Console.Write("{0} ", revision_data[i].outlink_vector_size);
-                        revision_data[i].revision_matrix = new byte[revision_data[i].number_of_revision][];
-                        revision_data[i].time_duration = new long[revision_data[i].number_of_revision];
-                        int outlink_vector_matrix_size_in_byte = (int)Math.Ceiling((double)(revision_data[i].outlink_vector_size / 8.0));
-                        //Console.WriteLine("2");
-                        for (int j = 0; j < revision_data[i].number_of_revision; j++)
-                        {
-                            revision_data[i].revision_matrix[j] = new byte[outlink_vector_matrix_size_in_byte];
-                            //Console.WriteLine("3 {0}", j);
-                            if (j == 0)
-                            {
-                                //string dt = rd.ReadString();
-                                //Console.Write("{0} ", dt);
-                                revision_data[i].first_time_stamp = Convert.ToDateTime(rd.ReadString()).AddMilliseconds(-3600000);
-                                //revision_data[i].first_time_stamp = rd.ReadString();
-                                revision_data[i].time_duration[j] = 0;
-                            }
-                            else
-                            {
-                                revision_data[i].time_duration[j] = rd.ReadInt64();
-                                //Console.Write("Time{0} ", revision_data[i].time_duration[j]);
-                            }
+                        revision_data[i].number_of_revision = rd.ReadInt32();
+                        //Console.Write("{0} ", revision_data[i].number_of_revision);
 
-                            for (int k = 0; k < outlink_vector_matrix_size_in_byte; k++)
-                            {
-                                revision_data[i].revision_matrix[j][k] = rd.ReadByte();
-                                //Console.Write("{0} ", revision_data[i].revision_matrix[j][k]);
-                            }
-                            
+                        var bit_vector_length = revision_data[i].outlink_vector_size * revision_data[i].number_of_revision;
+
+                        if (bit_vector_length % 8 != 0)
+                        {
+                            bit_vector_length += (8 - bit_vector_length % 8);
                         }
+
+                        revision_data[i].revision_matrix = new byte[bit_vector_length];
+                        revision_data[i].time_duration = new long[revision_data[i].number_of_revision];
+                        //Console.WriteLine("2");
+                        revision_data[i].time_duration[0] = rd.ReadInt64();
+                        for (int j = 1; j < revision_data[i].number_of_revision; j++)
+                        {
+                            revision_data[i].time_duration[j] = revision_data[i].time_duration[j] + rd.ReadInt64();
+                        }
+                        //Console.WriteLine("3 {0}", j);
+
+                        for (int j = 0; j < revision_data[i].revision_matrix.Length; j++)
+                        {
+                            revision_data[i].revision_matrix[j] = rd.ReadByte();
+                        }
+                         
                         //Console.WriteLine();
                     }
                 }
@@ -110,17 +106,13 @@ namespace SHS
 
         public void print_node_revision_info(node_revision_info info)
         {
+            DateTime d0 = Convert.ToDateTime("1998-01-01");
             Console.Write("{0}, ", info.number_of_revision);
             Console.Write("{0}, ", info.outlink_vector_size);
-            Console.Write("{0}, ", info.first_time_stamp.ToString());
-            for (int i = 0; i < info.number_of_revision; i ++ )
+            Console.Write("{0}, ", d0.AddDays(info.time_duration[0]));
+            for (int i = 1; i < info.number_of_revision; i ++ )
             {
-                Console.Write("{0}, ", info.first_time_stamp.AddSeconds(info.time_duration[i]).ToString());
-                //Console.Write("{0}, ", Convert.ToDateTime(info.first_time_stamp).AddSeconds(info.time_duration[i]));
-                for (int j = 0; j < info.revision_matrix[i].Length; j++)
-                {
-                    Console.Write("{0}, ", info.revision_matrix[i][j]);
-                }
+                Console.Write("{0}, ", d0.AddDays(info.time_duration[i]));
             }
             Console.WriteLine();
         }
@@ -131,15 +123,22 @@ namespace SHS
 
             //Console.Write("{0}, ", nodeId);
             //print_node_revision_info(info);
+            DateTime d0 = Convert.ToDateTime("1998-01-01");
+            long dist_start = (start_date - d0).Days;
+            long dist_end = (end_date - d0).Days;
 
             if (start_date > end_date) return null;
 
-            long dist_start = (long)(start_date - info.first_time_stamp).TotalSeconds;
-            long dist_end = (long)(end_date - info.first_time_stamp).TotalSeconds;
             //DateTime first_time_stamp = Convert.ToDateTime(info.first_time_stamp);
             //long dist_start = (first_time_stamp - start_date).Milliseconds;
             //long dist_end = (first_time_stamp - end_date).Milliseconds;
-            byte[] union_vector = new byte[(int)Math.Ceiling((double)(info.outlink_vector_size / 8.0))];
+
+ 
+
+            byte[] union_vector = new byte[info.outlink_vector_size];
+
+            if (info.outlink_vector_size != uids.Length)
+                Console.WriteLine("Some error happen!!!");
 
             List<long> final_outlink = new List<long>();
 
@@ -148,6 +147,7 @@ namespace SHS
             {
                 union_vector[i] = 0;
             }
+
             for (int i = 0; i < info.number_of_revision; i++)
             {
 
@@ -158,7 +158,7 @@ namespace SHS
                     for (int k = 0; k < union_vector.Length; k++)
                     {
                         //Console.Write("{0}|{1}={2}", info.revision_matrix[i][k], union_vector[k], (byte)(info.revision_matrix[i][k] | union_vector[k]));
-                        union_vector[k] = (byte)(info.revision_matrix[i][k] | union_vector[k]);
+                        union_vector[k] = (byte)(link_at_index(info.revision_matrix, i * union_vector.Length + k) | union_vector[k]);
                     }
                     //Console.WriteLine();
                 }
@@ -174,19 +174,22 @@ namespace SHS
 
             for (int i = 0; i < uids.Length; i++)  // byte vector
             {
-                dict.Add(urls[i], uids[i]);
-            }
-
-            dict.Values.CopyTo(uids, 0);
-
-
-            for (int i = 0; i < info.outlink_vector_size; i++)
-            {
-                if (link_at_index(union_vector, i) == 0)
+                if (union_vector[i] > 0)
                 {
-                    dict.Remove(urls[i]);
+                    dict.Add(urls[i], uids[i]);
                 }
             }
+
+            //dict.Values.CopyTo(uids, 0);
+
+
+            //for (int i = 0; i < info.outlink_vector_size; i++)
+            //{
+            //    if (link_at_index(union_vector, i) == 0)
+            //    {
+            //        dict.Remove(urls[i]);
+            //    }
+            //}
             return dict;
         }
     }
@@ -209,7 +212,7 @@ namespace SHS
             }
         }
 
-        public static void Main_(string[] args)
+        public static void Main(string[] args)
         {
             if (args.Length != 6)
             {
@@ -300,11 +303,11 @@ namespace SHS
             }
         }
 
-        public static void Main(string[] args)
-        {
-            Console.WriteLine("{0}", UrlUtils.HostOf("http://www.bbc.co.uk/index.html"));
-            Console.WriteLine("{0}", InvertHost("www.bbc.co.uk"));
-            Console.ReadLine();
-        }
+        //public static void Main(string[] args)
+        //{
+        //    Console.WriteLine("{0}", UrlUtils.HostOf("http://www.bbc.co.uk/index.html"));
+        //    Console.WriteLine("{0}", InvertHost("www.bbc.co.uk"));
+        //    Console.ReadLine();
+        //}
     }
 }

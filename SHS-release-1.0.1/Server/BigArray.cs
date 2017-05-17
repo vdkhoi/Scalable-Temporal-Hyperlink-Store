@@ -46,6 +46,13 @@ namespace SHS {
 
     public WrappedArray(Type t, long n) {
       this.inner = Array.CreateInstance(t, (int)n);
+      if (t.Name == "String")
+      {
+          for (int i = 0; i < n; i++)
+          {
+              inner.SetValue("", i);
+          }
+      }
     }
 
     public override long Length {

@@ -1,0 +1,8 @@
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\bin\x64\Release\SHS.ManageStores.exe.config
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\bin\x64\Release\SHS.ManageStores.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\bin\x64\Release\SHS.ManageStores.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\bin\x64\Release\SHS.Library.dll
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\bin\x64\Release\SHS.Library.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\obj\x64\Release\SHS.ManageStores.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\obj\x64\Release\SHS.ManageStores.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ManageStores\obj\x64\Release\ManageStores.csprojResolveAssemblyReference.cache

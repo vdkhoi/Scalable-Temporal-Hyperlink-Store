@@ -1,0 +1,9 @@
+F:\Projects\SHS_Data\SHS.ConvertLinkGraphToTemporalAdjList.exe.config
+F:\Projects\SHS_Data\SHS.ConvertLinkGraphToTemporalAdjList.exe
+F:\Projects\SHS_Data\SHS.ConvertLinkGraphToTemporalAdjList.pdb
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ConvertLinkGraphToTemporalAdjList\obj\x64\Release\ConvertLinkGraphToTemporalAdjList.csprojResolveAssemblyReference.cache
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ConvertLinkGraphToTemporalAdjList\obj\x64\Release\SHS.ConvertLinkGraphToTemporalAdjList.exe
+F:\Projects\Scalable_Hyperlink_Store\SHS-release-1.0.1\ConvertLinkGraphToTemporalAdjList\obj\x64\Release\SHS.ConvertLinkGraphToTemporalAdjList.pdb
+Z:\SHS\SHS_Data\SHS.ConvertLinkGraphToTemporalAdjList.exe.config
+Z:\SHS\SHS_Data\SHS.ConvertLinkGraphToTemporalAdjList.exe
+Z:\SHS\SHS_Data\SHS.ConvertLinkGraphToTemporalAdjList.pdb

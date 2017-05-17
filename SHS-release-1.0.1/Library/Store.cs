@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Threading;
 using System.Diagnostics;
+using System.IO;
 
 namespace SHS {
   public enum LinkCompression { None = 0, VarByte = 1, VarNybble = 2 };
@@ -22,7 +23,65 @@ namespace SHS {
   {
       public string pageSrcUrl;
       public string pageDstUrl;
-      public int out_degree;
+      public int outDegree;
+  }
+
+  public struct RevisionPairLinks
+  {
+      internal long pageSrcUid;
+      internal long[] pageDstUids;
+      internal int outDegree;
+      internal long timeStamp;
+
+        internal static RevisionPairLinks Read(BinaryReader rd)
+        {
+            var pSrcId = rd.ReadInt64();
+            var sTime = rd.ReadInt64();
+            var outDeg = rd.ReadInt32();
+            var pDstUids = new long[outDeg];
+            for (int i = 0; i < outDeg; i ++) {
+                pDstUids[i] = rd.ReadInt32();
+            }
+            return new RevisionPairLinks { pageSrcUid = pSrcId, timeStamp = sTime, outDegree = outDeg, pageDstUids = pDstUids };
+        }
+
+        internal static void Write(BinaryWriter wr, RevisionPairLinks a)
+        {
+            wr.Write(a.pageSrcUid);
+            wr.Write(a.timeStamp);
+            wr.Write(a.outDegree);
+            for (int i = 0; i < a.outDegree; i++){
+                wr.Write(a.pageDstUids[i]);
+            }
+        }
+
+        internal class Comparer : System.Collections.Generic.Comparer<RevisionPairLinks>
+        {
+            public override int Compare(RevisionPairLinks a, RevisionPairLinks b)
+            {
+
+                if (a.pageSrcUid < b.pageSrcUid) return -1;
+
+                if ((a.pageSrcUid == b.pageSrcUid) && (a.timeStamp < b.timeStamp)) return -1;
+
+                if ((a.pageSrcUid == b.pageSrcUid) && (a.timeStamp == b.timeStamp)){
+                    bool equal = true;
+                    int minDeg = (a.outDegree > b.outDegree) ? b.outDegree : a.outDegree;
+                    int i = 0;
+                    while (a.pageDstUids[i] == b.pageDstUids[i] && i < minDeg) {
+                        i++;
+                    }
+                    if (i == minDeg && a.outDegree < b.outDegree) return -1;
+                    if (i == minDeg && a.outDegree == b.outDegree) return 0;
+                    if (i == minDeg && a.outDegree > b.outDegree) return 1;
+                    if (i < minDeg) return a.pageDstUids[i] < b.pageDstUids[i] ? -1 : (a.pageDstUids[i] == b.pageDstUids[i]? 0 : 1);
+                }
+
+                return 1;
+
+
+            }
+        }
   }
 
   public class EpochPassed : Exception {
@@ -386,7 +445,6 @@ namespace SHS {
       }
     }
 
-
     public int AddIndividualLinks(IEnumerator<PairLinks> pageLinks,
                         int urlCellStrideLength = 32,
                         int fwdCellStrideLength = 32,
@@ -430,7 +488,7 @@ namespace SHS {
                     linkCnt++;
                     this.channels[ping.PartitionID(pl.pageDstUrl)].WriteString(pl.pageDstUrl);
                     
-                    for (numLnk = 1; numLnk < pl.out_degree; numLnk++)
+                    for (numLnk = 1; numLnk < pl.outDegree; numLnk++)
                     {
                         pageLinks.MoveNext();
                         pl = pageLinks.Current;
@@ -471,7 +529,7 @@ namespace SHS {
                     var pl = pageLinks.Current;
                     string pageSrcUrl = pl.pageSrcUrl;
                     pageCnt++;
-                    int numLinks = pl.out_degree;
+                    int numLinks = pl.outDegree;
                     if (smt.ContainsOrAdd(pageSrcUrl))
                     {
                         dupPageCnt++;
