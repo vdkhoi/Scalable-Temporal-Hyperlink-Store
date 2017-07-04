@@ -45,6 +45,10 @@ namespace SHS {
     BatchedSetUidState  = 0xf1000034,
     BatchedGetUidState  = 0xf1000035,
     CheckpointUidStates = 0xf1000036,
+    
+    // Temporal operation  
     AddTemporalPageLinks = 0xf1000037,
+    SampleTemporalLinks = 0xf1000038,
+    BatchedSampleTemporalLinks  = 0xf1000039
   }
 }

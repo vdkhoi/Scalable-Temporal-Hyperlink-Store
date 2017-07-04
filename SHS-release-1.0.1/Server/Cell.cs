@@ -425,8 +425,80 @@ namespace SHS {
             var linkUid = decompressor.GetUInt64();  // don't care that first gap is signed
           }
         }
+
+
         // var secs2 = 0.001 * sw.ElapsedMilliseconds;  // Khoi here
         //Console.Error.WriteLine("PERF: Cell {0} {1} portion: Loading took {2} seconds, indexing took {3} seconds", this.cell.fileName, this == this.cell.fwdCell ? "fwd" : "bwd", secs1, secs2);
+      }
+
+
+      internal void TemporalLoad()
+      {
+          // var sw = Stopwatch.StartNew(); // Khoi here
+          // Somewhat of a hack: If this LinkCell is not yet sealed, return immediately.
+          // This is OK as long as noone tries to use the cell subsequently.
+          // A better solution would be not to call Load on unsealed LinkCell objects.
+          if (this.numBytes == -1) return;
+
+          using (var rd = new BinaryReader(new BufferedStream(new FileStream(this.cell.fileName, FileMode.Open, FileAccess.Read, FileShare.Read))))
+          {
+              rd.BaseStream.Seek(this.startPos, SeekOrigin.Begin);
+              this.bytes = new CachedStream(rd.BaseStream, (ulong)this.numBytes);
+          }
+          //var secs1 = 0.001 * sw.ElapsedMilliseconds; // Khoi here
+          //sw.Restart(); // Khoi here
+
+          // Construct idxOffsets from main
+          var supraPuid = this.cell.part.ping.PUID(this.cell.supraUID);
+          long numIdxItems = (int)((supraPuid - 1) / this.indexStride) + 1;
+          this.idxOffsets = new ulong[numIdxItems];
+          var decompressor = this.NewDecompressor();
+          int idx = 0;
+          for (long puid = 0; puid < supraPuid; puid++)
+          {
+
+              if (puid == 393453)
+                  Console.WriteLine("Stop");
+
+              if (puid % this.indexStride == 0)
+              {
+                  idxOffsets[idx++] = decompressor.GetPosition();
+              }
+              uint m = decompressor.GetUInt32();                // Load uid diff
+              for (uint j = 0; j < m; j++)
+              {
+                  var linkUid = decompressor.GetUInt64();       // don't care that first gap is signed
+              }
+
+              if (m == 0)
+                  continue;                                     // uid has no outlink, therefore, no temporal data
+
+              uint n = decompressor.GetUInt32();                // Load number of revision
+              for (uint j = 0; j < n; j++)
+              {
+                  var timeStamp = decompressor.GetUInt64();     // don't care that first gap is signed
+              }
+
+              uint length = n * m;
+
+              if (length % TempUtils.RADIX != 0)
+              {
+                  length += (TempUtils.RADIX - length % TempUtils.RADIX);
+              }
+
+              length = length / TempUtils.RADIX;
+
+              for (uint j = 0; j < length; j++)
+              {
+                  var bit_matrix = decompressor.GetUInt64();  // don't care that first gap is signed
+              }
+
+          }
+
+          // TODO: Insert code to read time data to here
+
+          // var secs2 = 0.001 * sw.ElapsedMilliseconds;  // Khoi here
+          //Console.Error.WriteLine("PERF: Cell {0} {1} portion: Loading took {2} seconds, indexing took {3} seconds", this.cell.fileName, this == this.cell.fwdCell ? "fwd" : "bwd", secs1, secs2);
       }
 
       internal IntStreamDecompressor NewDecompressor() {
@@ -485,9 +557,85 @@ namespace SHS {
           linkUid += gap;
           linkUids.Add(linkUid);
         }
+
         this.nextPuid = puid + 1;
         return linkUids;
       }
+    }
+
+    internal class TemporalLinkCellRd
+    {
+        internal readonly LinkCell linkCell;
+        private readonly IntStreamDecompressor decompressor;  // stateful
+        private long nextPuid;                                // stateful
+
+        internal TemporalLinkCellRd(LinkCell linkCell)
+        {
+            this.linkCell = linkCell;
+            this.decompressor = this.linkCell.NewDecompressor();
+            this.nextPuid = 0;
+        }
+
+        // GetLinks takes a UID instead of a PUID because it uses the uid to decomress the 
+        // UID's first link, and an on-the-fly translation would require the PUID-to-UID 
+        // translation table to be loaded at all times.
+        internal List<long> GetLinks(long uid, long firstTime, long lastTime)
+        {
+            Contract.Requires(this.linkCell.cell.UidInLinkCell(uid));
+            Contract.Ensures(Contract.Result<List<long>>() != null);
+            Contract.Ensures(UID.LinksAreSorted(Contract.Result<List<long>>()));
+
+            long puid = this.linkCell.cell.part.ping.PUID(uid);
+            if (puid != this.nextPuid)
+            {
+                long block = puid / this.linkCell.indexStride;
+                this.decompressor.SetPosition(this.linkCell.idxOffsets[block]);
+                for (long pos = block * this.linkCell.indexStride; pos < puid; pos++)
+                {
+                    uint m = this.decompressor.GetUInt32();
+                    for (uint j = 0; j < m; j++)
+                    {
+                        // First gap (i=0) is actually an Int64, but I don't care
+                        this.decompressor.GetUInt64();
+                    }
+                }
+            }
+            uint n = this.decompressor.GetUInt32();
+            var linkUids = new List<long>((int)n);
+            var linkUid = uid;
+            for (uint j = 0; j < n; j++)
+            {
+                long gap = j == 0
+                  ? this.decompressor.GetInt64()
+                  : (long)this.decompressor.GetUInt64();
+                linkUid += gap;
+                linkUids.Add(linkUid);
+            }
+
+            uint r = this.decompressor.GetUInt32();
+            var revision = new List<long>((int)r);
+            long currentTimeStamp = 0;;
+            for (uint j = 0; j < r; j++)
+            {
+                currentTimeStamp = (j == 0) ? (long)this.decompressor.GetUInt64() : (currentTimeStamp + (long)this.decompressor.GetUInt64() );
+                revision.Add(currentTimeStamp);
+            }
+
+            var length = TempUtils.getBitMatrixLength((uint)revision.Count, (uint)linkUids.Count);
+            
+            UInt32[] bit_matrix = new UInt32[length];
+            for (uint j = 0; j < length; j++)
+            {
+                bit_matrix[j] = (j == 0) ? this.decompressor.GetUInt32() : (bit_matrix[j - 1] + this.decompressor.GetUInt32() );
+            }
+
+            var linkInTime = TempUtils.getListOfUidInTimeStamp(revision, bit_matrix, linkUids, firstTime, lastTime);
+            
+            // TODO: Insert code to read time data to here
+
+            this.nextPuid = puid + 1;
+            return linkInTime;
+        }
     }
   }
 }

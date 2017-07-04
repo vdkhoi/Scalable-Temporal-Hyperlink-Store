@@ -27,7 +27,7 @@ namespace SHS
         //public static int NUM_RECORDS = 503101;  //From Jan-2013
         public static long NUM_RECORDS = 0;  //From Jan-to-Mar-2013
         //public static int TEMP_BUFF = 47;
-        public node_revision_info[] revision_data;
+        public node_revision_info[] fwd_revision_data;
         public int[] pointer = new int[NUM_RECORDS];
         public long NUM_LINKS = 0;
         public UidMap nodeMap;
@@ -41,37 +41,37 @@ namespace SHS
                 {
                     NUM_RECORDS = rd.ReadInt64();
                     NUM_LINKS = rd.ReadInt64();
-                    revision_data = new node_revision_info[NUM_RECORDS];
+                    fwd_revision_data = new node_revision_info[NUM_RECORDS];
                     uuid = new long[NUM_RECORDS];
                     for (i = 0; i < NUM_RECORDS; i++)
                     {
                         uuid[i] = (long)rd.ReadInt64();
                         //Console.Write("{0} ", uuid[i]);
-                        revision_data[i].outlink_vector_size = rd.ReadInt32();
+                        fwd_revision_data[i].outlink_vector_size = rd.ReadInt32();
                         //Console.Write("{0} ", revision_data[i].outlink_vector_size);
-                        revision_data[i].number_of_revision = rd.ReadInt32();
+                        fwd_revision_data[i].number_of_revision = rd.ReadInt32();
                         //Console.Write("{0} ", revision_data[i].number_of_revision);
 
-                        var bit_vector_length = revision_data[i].outlink_vector_size * revision_data[i].number_of_revision;
+                        var bit_vector_length = fwd_revision_data[i].outlink_vector_size * fwd_revision_data[i].number_of_revision;
 
                         if (bit_vector_length % 8 != 0)
                         {
                             bit_vector_length += (8 - bit_vector_length % 8);
                         }
 
-                        revision_data[i].revision_matrix = new byte[bit_vector_length];
-                        revision_data[i].time_duration = new long[revision_data[i].number_of_revision];
+                        fwd_revision_data[i].revision_matrix = new byte[bit_vector_length];
+                        fwd_revision_data[i].time_duration = new long[fwd_revision_data[i].number_of_revision];
                         //Console.WriteLine("2");
-                        revision_data[i].time_duration[0] = rd.ReadInt64();
-                        for (int j = 1; j < revision_data[i].number_of_revision; j++)
+                        fwd_revision_data[i].time_duration[0] = rd.ReadInt64();
+                        for (int j = 1; j < fwd_revision_data[i].number_of_revision; j++)
                         {
-                            revision_data[i].time_duration[j] = revision_data[i].time_duration[j] + rd.ReadInt64();
+                            fwd_revision_data[i].time_duration[j] = fwd_revision_data[i].time_duration[j] + rd.ReadInt64();
                         }
                         //Console.WriteLine("3 {0}", j);
 
-                        for (int j = 0; j < revision_data[i].revision_matrix.Length; j++)
+                        for (int j = 0; j < fwd_revision_data[i].revision_matrix.Length; j++)
                         {
-                            revision_data[i].revision_matrix[j] = rd.ReadByte();
+                            fwd_revision_data[i].revision_matrix[j] = rd.ReadByte();
                         }
                          
                         //Console.WriteLine();
@@ -94,7 +94,7 @@ namespace SHS
         public node_revision_info getNodeInfo(long nodeId)
         {
             int idx = pointer[nodeMap[nodeId]];
-            return revision_data[idx];
+            return fwd_revision_data[idx];
         }
 
         public byte link_at_index(byte[] bit_vector, int position)

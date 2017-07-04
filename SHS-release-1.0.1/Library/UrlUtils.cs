@@ -1,4 +1,5 @@
 using Exception = System.Exception;
+using System;
 
 namespace SHS {
   public class UrlUtils {
@@ -34,6 +35,27 @@ namespace SHS {
       int i = prefixLen;
       while (i < url.Length && url[i] != ':' && url[i] != '/') i++;
       return i - prefixLen;
+    }
+
+    public static string getNormalURLFormat(string decodeURL)
+    {
+        char[] delimiter = { ' ', '\t', ','};
+        string first = "", later = "", revfirst = "";
+        int split_pos = decodeURL.IndexOf(')');
+        if (split_pos >= 4)
+        {
+            first = decodeURL.Substring(0, split_pos);
+            string[] dn = first.Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
+            int len = dn.Length;
+            revfirst = dn[0];
+            for (int i = 1; i < len; i++)
+            {
+                revfirst = dn[i] + "." + revfirst;
+            }
+            later = decodeURL.Substring(split_pos + 1);
+            return ("http://" + revfirst + later);
+        }
+        return null;
     }
   }
 

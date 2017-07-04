@@ -606,7 +606,7 @@ namespace SHS
                 using (var fwd = new StreamReader(new GZipStream(new FileStream(args0, FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
                 using (var wr = new StreamWriter(new GZipStream(new FileStream(args1, FileMode.OpenOrCreate, FileAccess.Write), CompressionMode.Compress)))
                 {
-                    while  ( ((line = fwd.ReadLine()) != null) )
+                    while (((line = fwd.ReadLine()) != null))
                     {
                         var field = line.Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
 
@@ -744,404 +744,376 @@ namespace SHS
             }
         }
 
-
-        public static void ConvertBwdFwdAdjUidList2TextMatrix(string args0, string args1, long num_list)
+        public static void CompressTemporalData(ref long[] current_fields, StreamReader rd, StreamWriter wr)
         {
             char[] delimiter = { '\t', ' ' };
-            string line = "";
-            long lastSrc = -1;
+            long lastSrc = current_fields[0];
             SortedSet<long> allURLs = new SortedSet<long>();
             SortedSet<Revision_Links> timeStampList = new SortedSet<Revision_Links>(new Revision_Links.Comparer());
+
+            while (!rd.EndOfStream && (current_fields[0] == lastSrc))
+            {
+
+                for (int i = 2; i < current_fields.Length; i++)
+                {
+                    allURLs.Add(current_fields[i]);
+                }
+                long[] outLinkList = new long[current_fields.Length - 2];
+                Array.Copy(current_fields, 2, outLinkList, 0, outLinkList.Length);
+                timeStampList.Add(new Revision_Links { time_Stamp = current_fields[1], link_Vector = outLinkList });
+
+
+                lastSrc = current_fields[0];
+
+                current_fields = rd.ReadLine().Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
+            }
+
+
+            var allLinks_Vector = allURLs.ToArray();
+            UidMap allLinks_Map = new UidMap(allLinks_Vector);
+            var pointers = new int[allLinks_Map.GetSize()];
+
+            for (int i = 0; i < pointers.Length; i++)
+            {
+                pointers[allLinks_Map[allLinks_Vector[i]]] = i;
+            }
+
+            var bit_vector_length = timeStampList.Count * allLinks_Vector.Length;
+
+            if (bit_vector_length % 8 != 0)
+            {
+                bit_vector_length += (8 - bit_vector_length % 8);
+            }
+
+            byte[] bit_matrix = new byte[bit_vector_length];
+            var vector_list_array = timeStampList.ToArray();
+
+            int[] time_diff = new int[timeStampList.Count];
+            time_diff[0] = (int)vector_list_array[0].time_Stamp;
+
+
+
+            for (int i = 0; i < vector_list_array.Length; i++)
+            {
+                if (i > 0)
+                    time_diff[i] = (int)(vector_list_array[i].time_Stamp - vector_list_array[i - 1].time_Stamp);
+
+                for (int j = 0; j < vector_list_array[i].link_Vector.Length; j++)
+                {
+                    if (allLinks_Map[vector_list_array[i].link_Vector[j]] > -1)
+                    {
+                        var base_index = i * allLinks_Vector.Length;
+                        bit_matrix[base_index + pointers[allLinks_Map[vector_list_array[i].link_Vector[j]]]] = 1;
+                    }
+                }
+
+            }
+
+
+            // Compress byte values array into bit
+            byte[] results = new byte[bit_matrix.Length / 8];
+
+            for (int i = 0; i < bit_matrix.Length / 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    if (bit_matrix[i * 8 + j] == 1)
+                    {
+                        byte curr_position = (byte)(1 << (7 - j));
+                        results[i] += curr_position;
+                    }
+                }
+            }
+
+            //wr.Write("{0}\t", lastSrc);                                         // Source URL
+            wr.Write("{0}\t", allLinks_Vector.Length);           // Size of link vector and direction
+            wr.Write("{0}\t", vector_list_array.Length);                        // Number of revisions
+
+
+            //wr.Write(lastSrc);                       // Source URL - Int64
+            //wr.Write(allLinks_Vector.Length);        // Size of link vector - Int32
+            //wr.Write(vector_list_array.Length);      // Number of revisions - Int32
+
+
+            for (int i = 0; i < time_diff.Length; i++)
+            {
+                wr.Write("{0}\t", time_diff[i]);                 // Time difference between time stamp
+                //wr.Write(time_diff[i]);                            // Int32
+            }
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                wr.Write("{0}\t", results[i]);                   // List of time revision bit matrix
+                //wr.Write(results[i]);                              // Binary
+            }
+
+            //wr.WriteLine("{0}", outlink_URLs);                  // List of out URLs
+
+            for (int i = 0; i < allLinks_Vector.Length - 1; i++)
+            {
+                wr.Write("{0}\t", allLinks_Vector[i]);
+            }
+
+            wr.Write("{0}", allLinks_Vector[allLinks_Vector.Length - 1]);
+        }
+
+        public static void ConvertBwdFwdAdjUidList2BinaryMatrix(string args0, string args1)
+        {
+            char[] delimiter = { '\t', ' ' };
             try
             {
+                int NUM_RECORDS = 0;
                 using (var fwd = new StreamReader(new GZipStream(new FileStream(args0, FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
                 using (var bwd = new StreamReader(new GZipStream(new FileStream("Bwd_" + args0, FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
-                using (var wr = new StreamWriter(new GZipStream(new FileStream(args1, FileMode.OpenOrCreate, FileAccess.Write), CompressionMode.Compress)))
+                using (var wr = new BinaryWriter(new BufferedStream(new GZipStream(new FileStream("tmp-" + args1, FileMode.OpenOrCreate, FileAccess.Write), CompressionMode.Compress))))
                 {
-                    while (((line = fwd.ReadLine()) != null) && ((line = bwd.ReadLine()) != null))
+                    var num_links = fwd.ReadLine();
+                    num_links = bwd.ReadLine();
+                    var fwd_fields = fwd.ReadLine().Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
+                    var bwd_fields = bwd.ReadLine().Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
+
+                    
+                    
+                    while (!fwd.EndOfStream && !bwd.EndOfStream)
                     {
-                        var fwd_field = line.Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
-                        var bwd_field = line.Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
 
-                        if (fwd_field[0] < bwd_field[0])
+                        if (fwd_fields[0] < bwd_fields[0])
                         {
-
-                            if (fwd_field[0] == lastSrc || (lastSrc < 0))   // Current URL is last URL
-                            {
-                                for (int i = 2; i < fwd_field.Length; i++)
-                                {
-                                    allURLs.Add(fwd_field[i]);
-                                }
-                                long[] outLinkList = new long[fwd_field.Length - 2];
-                                Array.Copy(fwd_field, 2, outLinkList, 0, outLinkList.Length);
-                                timeStampList.Add(new Revision_Links { time_Stamp = fwd_field[1], link_Vector = outLinkList });
-                            }
-                            else
-                            {
-                                var allLinks_Vector = allURLs.ToArray();
-                                UidMap allLinks_Map = new UidMap(allLinks_Vector);
-                                var pointers = new int[allLinks_Map.GetSize()];
-
-                                for (int i = 0; i < pointers.Length; i++)
-                                {
-                                    pointers[allLinks_Map[allLinks_Vector[i]]] = i;
-                                }
-
-                                var bit_vector_length = timeStampList.Count * allLinks_Vector.Length;
-
-                                if (bit_vector_length % 8 != 0)
-                                {
-                                    bit_vector_length += (8 - bit_vector_length % 8);
-                                }
-
-                                byte[] bit_matrix = new byte[bit_vector_length];
-                                var vector_list_array = timeStampList.ToArray();
-
-                                int[] time_diff = new int[timeStampList.Count];
-                                time_diff[0] = (int)vector_list_array[0].time_Stamp;
-
-
-
-                                for (int i = 0; i < vector_list_array.Length; i++)
-                                {
-                                    if (i > 0)
-                                        time_diff[i] = (int)(vector_list_array[i].time_Stamp - vector_list_array[i - 1].time_Stamp);
-
-                                    for (int j = 0; j < vector_list_array[i].link_Vector.Length; j++)
-                                    {
-                                        if (allLinks_Map[vector_list_array[i].link_Vector[j]] > -1)
-                                        {
-                                            var base_index = i * allLinks_Vector.Length;
-                                            bit_matrix[base_index + pointers[allLinks_Map[vector_list_array[i].link_Vector[j]]]] = 1;
-                                        }
-                                    }
-
-                                }
-
-
-                                // Compress byte values array into bit
-                                byte[] results = new byte[bit_matrix.Length / 8];
-
-                                for (int i = 0; i < bit_matrix.Length / 8; i++)
-                                {
-                                    for (int j = 0; j < 8; j++)
-                                    {
-                                        if (bit_matrix[i * 8 + j] == 1)
-                                        {
-                                            byte curr_position = (byte)(1 << (7 - j));
-                                            results[i] += curr_position;
-                                        }
-                                    }
-                                }
-
-                                wr.Write("{0}\t", lastSrc);                       // Source URL
-                                wr.Write("{0}\t0\t", allLinks_Vector.Length);           // Size of link vector
-                                wr.Write("{0}\t", vector_list_array.Length);                // Number of revisions
-
-
-                                //wr.Write(lastSrc);                       // Source URL - Int64
-                                //wr.Write(allLinks_Vector.Length);        // Size of link vector - Int32
-                                //wr.Write(vector_list_array.Length);      // Number of revisions - Int32
-
-
-                                for (int i = 0; i < time_diff.Length; i++)
-                                {
-                                    wr.Write("{0}\t", time_diff[i]);                 // Time difference between time stamp
-                                    //wr.Write(time_diff[i]);                            // Int32
-                                }
-
-                                for (int i = 0; i < results.Length; i++)
-                                {
-                                    wr.Write("{0}\t", results[i]);                   // List of time revision bit matrix
-                                    //wr.Write(results[i]);                              // Binary
-                                }
-
-                                //wr.WriteLine("{0}", outlink_URLs);                  // List of out URLs
-
-                                for (int i = 0; i < allLinks_Vector.Length - 1; i++)
-                                {
-                                    wr.Write("{0}\t", allLinks_Vector[i]);
-                                }
-
-                                wr.WriteLine("{0}", allLinks_Vector[allLinks_Vector.Length - 1]);
-
-                                // Clear old data for new links
-                                allURLs.Clear();
-                                timeStampList.Clear();
-
-
-                                for (int i = 2; i < fwd_field.Length; i++)
-                                {
-                                    allURLs.Add(fwd_field[i]);
-                                }
-                                long[] outLinkList = new long[fwd_field.Length - 2];
-                                Array.Copy(fwd_field, 2, outLinkList, 0, outLinkList.Length);
-                                timeStampList.Add(new Revision_Links { time_Stamp = fwd_field[1], link_Vector = outLinkList });
-
-                            }
-
-
-
-                            lastSrc = fwd_field[0];
-
+                            wr.Write(fwd_fields[0]);
+                            wr.Write((byte)1);
+                            CompressTemporalDataToBinary(current_fields: ref fwd_fields, rd: fwd, wr: wr);
                         }
-
-                        if (fwd_field[0] > bwd_field[0])
+                        else if (fwd_fields[0] > bwd_fields[0])
                         {
-
-                            if (bwd_field[0] == lastSrc || (lastSrc < 0))   // Current URL is last URL
-                            {
-                                for (int i = 2; i < bwd_field.Length; i++)
-                                {
-                                    allURLs.Add(bwd_field[i]);
-                                }
-                                long[] outLinkList = new long[bwd_field.Length - 2];
-                                Array.Copy(bwd_field, 2, outLinkList, 0, outLinkList.Length);
-                                timeStampList.Add(new Revision_Links { time_Stamp = bwd_field[1], link_Vector = outLinkList });
-                            }
-                            else
-                            {
-                                var allLinks_Vector = allURLs.ToArray();
-                                UidMap allLinks_Map = new UidMap(allLinks_Vector);
-                                var pointers = new int[allLinks_Map.GetSize()];
-
-                                for (int i = 0; i < pointers.Length; i++)
-                                {
-                                    pointers[allLinks_Map[allLinks_Vector[i]]] = i;
-                                }
-
-                                var bit_vector_length = timeStampList.Count * allLinks_Vector.Length;
-
-                                if (bit_vector_length % 8 != 0)
-                                {
-                                    bit_vector_length += (8 - bit_vector_length % 8);
-                                }
-
-                                byte[] bit_matrix = new byte[bit_vector_length];
-                                var vector_list_array = timeStampList.ToArray();
-
-                                int[] time_diff = new int[timeStampList.Count];
-                                time_diff[0] = (int)vector_list_array[0].time_Stamp;
-
-
-
-                                for (int i = 0; i < vector_list_array.Length; i++)
-                                {
-                                    if (i > 0)
-                                        time_diff[i] = (int)(vector_list_array[i].time_Stamp - vector_list_array[i - 1].time_Stamp);
-
-                                    for (int j = 0; j < vector_list_array[i].link_Vector.Length; j++)
-                                    {
-                                        if (allLinks_Map[vector_list_array[i].link_Vector[j]] > -1)
-                                        {
-                                            var base_index = i * allLinks_Vector.Length;
-                                            bit_matrix[base_index + pointers[allLinks_Map[vector_list_array[i].link_Vector[j]]]] = 1;
-                                        }
-                                    }
-
-                                }
-
-
-                                // Compress byte values array into bit
-                                byte[] results = new byte[bit_matrix.Length / 8];
-
-                                for (int i = 0; i < bit_matrix.Length / 8; i++)
-                                {
-                                    for (int j = 0; j < 8; j++)
-                                    {
-                                        if (bit_matrix[i * 8 + j] == 1)
-                                        {
-                                            byte curr_position = (byte)(1 << (7 - j));
-                                            results[i] += curr_position;
-                                        }
-                                    }
-                                }
-
-                                wr.Write("{0}\t", lastSrc);                       // Source URL
-                                wr.Write("{0}\t1\t", allLinks_Vector.Length);           // Size of link vector
-                                wr.Write("{0}\t", vector_list_array.Length);                // Number of revisions
-
-
-                                //wr.Write(lastSrc);                       // Source URL - Int64
-                                //wr.Write(allLinks_Vector.Length);        // Size of link vector - Int32
-                                //wr.Write(vector_list_array.Length);      // Number of revisions - Int32
-
-
-                                for (int i = 0; i < time_diff.Length; i++)
-                                {
-                                    wr.Write("{0}\t", time_diff[i]);                 // Time difference between time stamp
-                                    //wr.Write(time_diff[i]);                            // Int32
-                                }
-
-                                for (int i = 0; i < results.Length; i++)
-                                {
-                                    wr.Write("{0}\t", results[i]);                   // List of time revision bit matrix
-                                    //wr.Write(results[i]);                              // Binary
-                                }
-
-                                //wr.WriteLine("{0}", outlink_URLs);                  // List of out URLs
-
-                                for (int i = 0; i < allLinks_Vector.Length - 1; i++)
-                                {
-                                    wr.Write("{0}\t", allLinks_Vector[i]);
-                                }
-
-                                wr.WriteLine("{0}", allLinks_Vector[allLinks_Vector.Length - 1]);
-
-                                // Clear old data for new links
-                                allURLs.Clear();
-                                timeStampList.Clear();
-
-
-                                for (int i = 2; i < bwd_field.Length; i++)
-                                {
-                                    allURLs.Add(bwd_field[i]);
-                                }
-                                long[] outLinkList = new long[bwd_field.Length - 2];
-                                Array.Copy(bwd_field, 2, outLinkList, 0, outLinkList.Length);
-                                timeStampList.Add(new Revision_Links { time_Stamp = bwd_field[1], link_Vector = outLinkList });
-
-                            }
-
-
-
-                            lastSrc = bwd_field[0];
-
+                            wr.Write(bwd_fields[0]);
+                            wr.Write((byte)0);
+                            CompressTemporalDataToBinary(current_fields: ref bwd_fields, rd: bwd, wr: wr);
                         }
-
-
-                        if (fwd_field[0] == bwd_field[0])
+                        else
                         {
-
-                            if (bwd_field[0] == lastSrc || (lastSrc < 0))   // Current URL is last URL
-                            {
-                                for (int i = 2; i < bwd_field.Length; i++)
-                                {
-                                    allURLs.Add(bwd_field[i]);
-                                }
-                                long[] outLinkList = new long[bwd_field.Length - 2];
-                                Array.Copy(bwd_field, 2, outLinkList, 0, outLinkList.Length);
-                                timeStampList.Add(new Revision_Links { time_Stamp = bwd_field[1], link_Vector = outLinkList });
-                            }
-                            else
-                            {
-                                var allLinks_Vector = allURLs.ToArray();
-                                UidMap allLinks_Map = new UidMap(allLinks_Vector);
-                                var pointers = new int[allLinks_Map.GetSize()];
-
-                                for (int i = 0; i < pointers.Length; i++)
-                                {
-                                    pointers[allLinks_Map[allLinks_Vector[i]]] = i;
-                                }
-
-                                var bit_vector_length = timeStampList.Count * allLinks_Vector.Length;
-
-                                if (bit_vector_length % 8 != 0)
-                                {
-                                    bit_vector_length += (8 - bit_vector_length % 8);
-                                }
-
-                                byte[] bit_matrix = new byte[bit_vector_length];
-                                var vector_list_array = timeStampList.ToArray();
-
-                                int[] time_diff = new int[timeStampList.Count];
-                                time_diff[0] = (int)vector_list_array[0].time_Stamp;
-
-
-
-                                for (int i = 0; i < vector_list_array.Length; i++)
-                                {
-                                    if (i > 0)
-                                        time_diff[i] = (int)(vector_list_array[i].time_Stamp - vector_list_array[i - 1].time_Stamp);
-
-                                    for (int j = 0; j < vector_list_array[i].link_Vector.Length; j++)
-                                    {
-                                        if (allLinks_Map[vector_list_array[i].link_Vector[j]] > -1)
-                                        {
-                                            var base_index = i * allLinks_Vector.Length;
-                                            bit_matrix[base_index + pointers[allLinks_Map[vector_list_array[i].link_Vector[j]]]] = 1;
-                                        }
-                                    }
-
-                                }
-
-
-                                // Compress byte values array into bit
-                                byte[] results = new byte[bit_matrix.Length / 8];
-
-                                for (int i = 0; i < bit_matrix.Length / 8; i++)
-                                {
-                                    for (int j = 0; j < 8; j++)
-                                    {
-                                        if (bit_matrix[i * 8 + j] == 1)
-                                        {
-                                            byte curr_position = (byte)(1 << (7 - j));
-                                            results[i] += curr_position;
-                                        }
-                                    }
-                                }
-
-                                wr.Write("{0}\t", lastSrc);                       // Source URL
-                                wr.Write("{0}\t1\t", allLinks_Vector.Length);           // Size of link vector
-                                wr.Write("{0}\t", vector_list_array.Length);                // Number of revisions
-
-
-                                //wr.Write(lastSrc);                       // Source URL - Int64
-                                //wr.Write(allLinks_Vector.Length);        // Size of link vector - Int32
-                                //wr.Write(vector_list_array.Length);      // Number of revisions - Int32
-
-
-                                for (int i = 0; i < time_diff.Length; i++)
-                                {
-                                    wr.Write("{0}\t", time_diff[i]);                 // Time difference between time stamp
-                                    //wr.Write(time_diff[i]);                            // Int32
-                                }
-
-                                for (int i = 0; i < results.Length; i++)
-                                {
-                                    wr.Write("{0}\t", results[i]);                   // List of time revision bit matrix
-                                    //wr.Write(results[i]);                              // Binary
-                                }
-
-                                //wr.WriteLine("{0}", outlink_URLs);                  // List of out URLs
-
-                                for (int i = 0; i < allLinks_Vector.Length - 1; i++)
-                                {
-                                    wr.Write("{0}\t", allLinks_Vector[i]);
-                                }
-
-                                wr.WriteLine("{0}", allLinks_Vector[allLinks_Vector.Length - 1]);
-
-                                // Clear old data for new links
-                                allURLs.Clear();
-                                timeStampList.Clear();
-
-
-                                for (int i = 2; i < bwd_field.Length; i++)
-                                {
-                                    allURLs.Add(bwd_field[i]);
-                                }
-                                long[] outLinkList = new long[bwd_field.Length - 2];
-                                Array.Copy(bwd_field, 2, outLinkList, 0, outLinkList.Length);
-                                timeStampList.Add(new Revision_Links { time_Stamp = bwd_field[1], link_Vector = outLinkList });
-
-                            }
-
-
-
-                            lastSrc = bwd_field[0];
-
+                            wr.Write(fwd_fields[0]);
+                            wr.Write((byte)1);
+                            CompressTemporalDataToBinary(current_fields: ref fwd_fields, rd: fwd, wr: wr);
+                            CompressTemporalDataToBinary(current_fields: ref bwd_fields, rd: bwd, wr: wr);
                         }
-
+                        NUM_RECORDS++;
                     }
 
+                    while (!fwd.EndOfStream)
+                    {
+                        wr.Write(fwd_fields[0]);
+                        wr.Write((byte)1);
+                        CompressTemporalDataToBinary(current_fields: ref fwd_fields, rd: fwd, wr: wr);
+                        NUM_RECORDS++;
+                    }
+
+                    while (!bwd.EndOfStream)
+                    {
+                        wr.Write(bwd_fields[0]);
+                        wr.Write((byte)0);
+                        CompressTemporalDataToBinary(current_fields: ref bwd_fields, rd: bwd, wr: wr);
+                        NUM_RECORDS++;
+                    }
+                   
+                }
+
+                using (var wr = new BinaryWriter(new BufferedStream(new GZipStream(new FileStream(args1, FileMode.OpenOrCreate, FileAccess.Write), CompressionMode.Compress))))
+                using (var rd = new BinaryReader(new GZipStream(new FileStream("tmp-" + args1, FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
+                {
+                    wr.Write(NUM_RECORDS);
+                    while (true)
+                    {
+                        wr.Write(rd.ReadByte());
+                    }
                 }
             }
             catch (Exception e)
             {
                 Console.Error.WriteLine("{0} {1}", e.Source, e.Message);
                 Console.Error.WriteLine(e.StackTrace);
-                Console.Error.WriteLine(lastSrc);
+            }
+            finally
+            {
+
+            }
+        }
+
+
+        public static void CompressTemporalDataToBinary(ref long[] current_fields, StreamReader rd, BinaryWriter wr)
+        {
+            char[] delimiter = { '\t', ' ' };
+            long lastSrc = current_fields[0];
+            SortedSet<long> allURLs = new SortedSet<long>();
+            SortedSet<Revision_Links> timeStampList = new SortedSet<Revision_Links>(new Revision_Links.Comparer());
+
+            while (!rd.EndOfStream && (current_fields[0] == lastSrc))
+            {
+
+                for (int i = 2; i < current_fields.Length; i++)
+                {
+                    allURLs.Add(current_fields[i]);
+                }
+                long[] outLinkList = new long[current_fields.Length - 2];
+                Array.Copy(current_fields, 2, outLinkList, 0, outLinkList.Length);
+                timeStampList.Add(new Revision_Links { time_Stamp = current_fields[1], link_Vector = outLinkList });
+
+
+                lastSrc = current_fields[0];
+
+                current_fields = rd.ReadLine().Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
+            }
+
+
+            var allLinks_Vector = allURLs.ToArray();
+            UidMap allLinks_Map = new UidMap(allLinks_Vector);
+            var pointers = new int[allLinks_Map.GetSize()];
+
+            for (int i = 0; i < pointers.Length; i++)
+            {
+                pointers[allLinks_Map[allLinks_Vector[i]]] = i;
+            }
+
+            var bit_vector_length = timeStampList.Count * allLinks_Vector.Length;
+
+            if (bit_vector_length % 8 != 0)
+            {
+                bit_vector_length += (8 - bit_vector_length % 8);
+            }
+
+            byte[] bit_matrix = new byte[bit_vector_length];
+            var vector_list_array = timeStampList.ToArray();
+
+            int[] time_diff = new int[timeStampList.Count];
+            time_diff[0] = (int)vector_list_array[0].time_Stamp;
+
+
+
+            for (int i = 0; i < vector_list_array.Length; i++)
+            {
+                if (i > 0)
+                    time_diff[i] = (int)(vector_list_array[i].time_Stamp - vector_list_array[i - 1].time_Stamp);
+
+                for (int j = 0; j < vector_list_array[i].link_Vector.Length; j++)
+                {
+                    if (allLinks_Map[vector_list_array[i].link_Vector[j]] > -1)
+                    {
+                        var base_index = i * allLinks_Vector.Length;
+                        bit_matrix[base_index + pointers[allLinks_Map[vector_list_array[i].link_Vector[j]]]] = 1;
+                    }
+                }
+
+            }
+
+
+            // Compress byte values array into bit
+            byte[] results = new byte[bit_matrix.Length / 8];
+
+            for (int i = 0; i < bit_matrix.Length / 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    if (bit_matrix[i * 8 + j] == 1)
+                    {
+                        byte curr_position = (byte)(1 << (7 - j));
+                        results[i] += curr_position;
+                    }
+                }
+            }
+
+            //wr.Write("{0}\t", lastSrc);                                         // Source URL
+            wr.Write(allLinks_Vector.Length);           // Size of link vector and direction
+            wr.Write(vector_list_array.Length);                        // Number of revisions
+
+
+            //wr.Write(lastSrc);                       // Source URL - Int64
+            //wr.Write(allLinks_Vector.Length);        // Size of link vector - Int32
+            //wr.Write(vector_list_array.Length);      // Number of revisions - Int32
+
+
+            for (int i = 0; i < time_diff.Length; i++)
+            {
+                wr.Write(time_diff[i]);                 // Time difference between time stamp
+                //wr.Write(time_diff[i]);                            // Int32
+            }
+
+            for (int i = 0; i < results.Length - 1; i++)
+            {
+                wr.Write(results[i]);                   // List of time revision bit matrix
+                //wr.Write(results[i]);                              // Binary
+            }
+
+            wr.Write(results[results.Length - 1]);                  // List of out URLs
+
+            //for (int i = 0; i < allLinks_Vector.Length - 1; i++)
+            //{
+            //    wr.Write("{0}\t", allLinks_Vector[i]);
+            //}
+
+            //wr.Write("{0}", allLinks_Vector[allLinks_Vector.Length - 1]);
+        }
+
+        public static void ConvertBwdFwdAdjUidList2TextMatrix(string args0, string args1)
+        {
+            char[] delimiter = { '\t', ' ' };
+            try
+            {
+                using (var fwd = new StreamReader(new GZipStream(new FileStream(args0, FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
+                using (var bwd = new StreamReader(new GZipStream(new FileStream("Bwd_" + args0, FileMode.Open, FileAccess.Read), CompressionMode.Decompress)))
+                using (var wr = new StreamWriter(new BufferedStream(new GZipStream(new FileStream(args1, FileMode.OpenOrCreate, FileAccess.Write), CompressionMode.Compress))))
+                {
+                    var num_links = fwd.ReadLine();
+                    num_links = bwd.ReadLine();
+                    var fwd_fields = fwd.ReadLine().Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
+                    var bwd_fields = bwd.ReadLine().Split(delimiter, StringSplitOptions.RemoveEmptyEntries).Select(Int64.Parse).ToArray();
+
+                    
+                    while (!fwd.EndOfStream && !bwd.EndOfStream)
+                    {
+
+                        if (fwd_fields[0] < bwd_fields[0])
+                        {
+                            wr.Write("{0}\t1\t", fwd_fields[0]);
+                            CompressTemporalData(current_fields: ref fwd_fields, rd: fwd, wr: wr);
+                            wr.WriteLine();
+                        }
+                        else if (fwd_fields[0] > bwd_fields[0])
+                        {
+                            wr.Write("{0}\t0\t", bwd_fields[0]);
+                            CompressTemporalData(current_fields: ref bwd_fields, rd: bwd, wr: wr);
+                            wr.WriteLine();
+                        }
+                        else
+                        {
+                            wr.Write("{0}\t1\t", fwd_fields[0]);
+                            CompressTemporalData(current_fields: ref fwd_fields, rd: fwd, wr: wr);
+                            wr.Write("\t");
+                            CompressTemporalData(current_fields: ref bwd_fields, rd: bwd, wr: wr);
+                            wr.WriteLine();
+                        }
+                        
+                    }
+
+                    while (!fwd.EndOfStream)
+                    {
+                        wr.Write("{0}\t1\t", fwd_fields[0]);
+                        CompressTemporalData(current_fields: ref fwd_fields, rd: fwd, wr: wr);
+                        wr.WriteLine();
+                        
+                    }
+
+                    while (!bwd.EndOfStream)
+                    {
+                        wr.Write("{0}\t0\t", bwd_fields[0]);
+                        CompressTemporalData(current_fields: ref bwd_fields, rd: bwd, wr: wr);
+                        wr.WriteLine();
+                        
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("{0} {1}", e.Source, e.Message);
+                Console.Error.WriteLine(e.StackTrace);
             }
             finally
             {
@@ -1362,13 +1334,12 @@ namespace SHS
                     var sw = Stopwatch.StartNew();
                     var store = new Service(args[0]).OpenStore(Guid.Parse(args[1]));
                     KeyValuePair<long, long> pair = ConvertLinks2AdjListByUid(store, args[3], "ConvertLinks2AdjListByUid.gz");
-                    ConvertAdjUidList2TextMatrix("ConvertLinks2AdjListByUid.gz", "ConvertAdjUidList2TextMatrix.gz", pair.Key);
+                    //ConvertAdjUidList2TextMatrix("ConvertLinks2AdjListByUid.gz", "ConvertAdjUidList2TextMatrix.gz", pair.Key);
                     //ConvertAdjUidList2BinaryMatrix("ConvertLinks2AdjListByUid.gz", "ConvertAdjUidList2BinaryMatrix.gz", pair.Key);
                     //ConvertAdjUidList2BinaryMatrix("Bwd_ConvertLinks2AdjListByUid.gz", "ConvertAdjUidList2BinaryMatrix.gz", pair.Value);
+                    ConvertBwdFwdAdjUidList2BinaryMatrix("ConvertLinks2AdjListByUid.gz", "ConvertBwdFwdAdjUidList2BinaryMatrix.gz");
+                    //ConvertBwdFwdAdjUidList2TextMatrix("ConvertLinks2AdjListByUid.gz", "ConvertBwdFwdAdjUidList2TextMatrix.gz");
                 }
-
-
-
             }
 
             //var store = new Service(args[0]).OpenStore(Guid.Parse(args[1]));
